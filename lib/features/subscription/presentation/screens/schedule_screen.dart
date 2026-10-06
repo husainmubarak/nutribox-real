@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/widgets/app_primary_button.dart';
+import '../../../../core/widgets/meal_address_tile.dart';
+import '../../../../core/widgets/option_tile.dart';
+import '../../../../core/widgets/stepper_header.dart';
+import '../../../../core/widgets/week_day_chips.dart';
 import '../../data/subscription_repository.dart';
 import '../../models/address_model.dart';
 import '../../models/package_model.dart';
@@ -23,48 +30,94 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
-  final Map<String, Map<String, String?>> _jadwalPengiriman = {};
+  String _selectedDay = 'Senin';
+  final Map<String, Map<String, AddressModel?>> _jadwalPengiriman = {};
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+    final defaultAddr = widget.addresses.isNotEmpty ? widget.addresses.first : null;
     for (var h in AppConstants.listHari) {
       _jadwalPengiriman[h] = {};
       for (var w in AppConstants.listWaktuMakan) {
-        _jadwalPengiriman[h]![w] = null;
+        _jadwalPengiriman[h]![w] = defaultAddr;
       }
     }
+  }
+
+  void _showFloatingSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTypography.bodySm.copyWith(color: AppColors.surface),
+        ),
+        backgroundColor: isError ? AppColors.textPrimary : AppColors.brandGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+  }
+
+  void _pilihAlamatViaSheet(String waktuMakan) {
+    final currentAddress = _jadwalPengiriman[_selectedDay]?[waktuMakan];
+
+    AppBottomSheet.show(
+      context: context,
+      title: 'Pilih Alamat $waktuMakan',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ...widget.addresses.map((alamat) {
+            final isSelected = currentAddress?.id == alamat.id;
+            return OptionTile(
+              title: alamat.labelAlamat,
+              subtitle: alamat.alamatLengkap,
+              leading: const Icon(
+                Icons.location_on_outlined,
+                color: AppColors.brandGreen,
+              ),
+              selected: isSelected,
+              onTap: () {
+                setState(() {
+                  _jadwalPengiriman[_selectedDay]![waktuMakan] = alamat;
+                });
+                Navigator.pop(context);
+              },
+            );
+          }),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ),
+    );
   }
 
   Future<void> _simpanJadwal() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
+    if (widget.addresses.isEmpty) {
+      _showFloatingSnackBar('Tambahkan alamat terlebih dahulu!');
+      return;
+    }
+
+    final defaultAddr = widget.addresses.first;
     final List<ScheduleItem> itemsToSave = [];
 
     for (var h in AppConstants.listHari) {
       for (var w in AppConstants.listWaktuMakan) {
-        final addressId = _jadwalPengiriman[h]![w];
-        if (addressId != null && addressId.isNotEmpty) {
-          itemsToSave.add(ScheduleItem(
-            userId: user.id,
-            hari: h,
-            waktuMakan: w,
-            alamatId: addressId,
-          ));
-        }
+        final address = _jadwalPengiriman[h]?[w] ?? defaultAddr;
+        itemsToSave.add(ScheduleItem(
+          userId: user.id,
+          hari: h,
+          waktuMakan: w,
+          alamatId: address.id,
+        ));
       }
-    }
-
-    if (itemsToSave.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pilih minimal satu jadwal pengiriman!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
     }
 
     setState(() => _isSaving = true);
@@ -77,13 +130,6 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Jadwal berhasil disimpan!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -95,12 +141,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan jadwal: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showFloatingSnackBar('Gagal menyimpan jadwal: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -109,111 +150,66 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final defaultAddr = widget.addresses.isNotEmpty
+        ? widget.addresses.first
+        : const AddressModel(
+            id: '',
+            userId: '',
+            labelAlamat: 'Belum ada alamat',
+            alamatLengkap: '-',
+          );
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Atur Jadwal Pengiriman'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: AppConstants.listHari.length,
-              itemBuilder: (context, index) {
-                final hari = AppConstants.listHari[index];
+      body: SafeArea(
+        child: Column(
+          children: [
+            const StepperHeader(
+              currentStep: 1,
+              totalSteps: 3,
+              title: 'Jadwal Alamat Pengiriman',
+              subtitle: 'Tentukan lokasi pengiriman makanan untuk setiap hari',
+            ),
+            WeekDayChips(
+              selectedDay: _selectedDay,
+              onDaySelected: (day) => setState(() => _selectedDay = day),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pagePadding,
+                ),
+                children: AppConstants.listWaktuMakan.map((waktu) {
+                  final address =
+                      _jadwalPengiriman[_selectedDay]?[waktu] ?? defaultAddr;
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hari,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                        const Divider(),
-                        ...AppConstants.listWaktuMakan.map((waktu) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                SizedBox(
-                                  width: 80,
-                                  child: Text(
-                                    waktu,
-                                    style: const TextStyle(fontWeight: FontWeight.w500),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    initialValue: _jadwalPengiriman[hari]![waktu],
-                                    hint: const Text('Pilih Alamat'),
-                                    isExpanded: true,
-                                    decoration: const InputDecoration(
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 0,
-                                      ),
-                                    ),
-                                    items: widget.addresses.map((alamat) {
-                                      return DropdownMenuItem<String>(
-                                        value: alamat.id,
-                                        child: Text(alamat.labelAlamat),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _jadwalPengiriman[hari]![waktu] = val;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                  return MealAddressTile(
+                    waktuMakan: waktu,
+                    labelAlamat: address.labelAlamat,
+                    alamatLengkap: address.alamatLengkap,
+                    onUbahTap: () => _pilihAlamatViaSheet(waktu),
+                  );
+                }).toList(),
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                )
-              ],
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.pagePadding),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                boxShadow: AppShadows.top,
+              ),
+              child: AppPrimaryButton(
+                text: 'Lanjut ke Pembayaran',
+                isLoading: _isSaving,
+                onPressed: _simpanJadwal,
+              ),
             ),
-            child: _isSaving
-                ? const Center(child: CircularProgressIndicator(color: Colors.green))
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      minimumSize: const Size.fromHeight(50),
-                    ),
-                    onPressed: _simpanJadwal,
-                    child: const Text('SIMPAN JADWAL'),
-                  ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }

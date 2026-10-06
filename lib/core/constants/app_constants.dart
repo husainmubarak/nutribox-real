@@ -4,7 +4,7 @@ class AppConstants {
   // Supabase Configuration
   static const String supabaseUrl = 'https://hqdihfmxygxzqmxgfgsr.supabase.co';
   static const String supabaseAnonKey =
-      'sb_publishable_P1rQSJcxdlJMDP45pS_DwA_jWdjA12Z';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZGloZm14eWd4enFteGdmZ3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTkxMDMsImV4cCI6MjEwMzkzNTEwM30.v_UM8zlpQj1LGpsE9AJSDJgpRIXVwLxv3zgwIlrXLBI';
 
   // Table Names
   static const String tableUsers = 'users';

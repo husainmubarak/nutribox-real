@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/widgets/app_primary_button.dart';
+import '../../../../core/widgets/info_banner.dart';
+import '../../../../core/widgets/option_tile.dart';
+import '../../../../core/widgets/stepper_header.dart';
 import '../../../home/data/home_repository.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../data/subscription_repository.dart';
@@ -20,7 +27,24 @@ class PaymentScreen extends ConsumerStatefulWidget {
 
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   bool _isProcessing = false;
-  String _metodePembayaran = 'Transfer Bank';
+  String _metodePembayaran = 'GoPay';
+  bool _voucherDipakai = false;
+
+  void _showFloatingSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTypography.bodySm.copyWith(color: AppColors.surface),
+        ),
+        backgroundColor: isError ? AppColors.textPrimary : AppColors.brandGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+  }
 
   Future<void> _prosesPembayaran() async {
     final user = ref.read(currentUserProvider);
@@ -30,12 +54,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
+      final diskon = _voucherDipakai ? 50000 : 0;
+      final totalBayar = (widget.selectedPackage.harga - diskon).clamp(0, widget.selectedPackage.harga);
 
       await repo.createSubscription(
         userId: user.id,
         paketId: widget.selectedPackage.id,
         durasiHari: widget.selectedPackage.durasiHari,
-        totalHarga: widget.selectedPackage.harga,
+        totalHarga: totalBayar,
         paymentMethod: _metodePembayaran,
         simulateImmediateActive: true,
       );
@@ -44,47 +70,50 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       ref.invalidate(homeDashboardProvider);
 
       if (mounted) {
-        showDialog(
+        AppBottomSheet.show(
           context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            title: const Text('Pesanan Berhasil!', textAlign: TextAlign.center),
-            content: const Text(
-              'Terima kasih! Jadwal pengiriman makanan sehat Anda sudah kami terima dan paket langganan Anda kini telah aktif.',
-              textAlign: TextAlign.center,
-            ),
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  minimumSize: const Size.fromHeight(45),
+          title: 'Pesanan Berhasil Aktif!',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: AppColors.brandGreenSoft,
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: AppColors.brandGreen,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Terima kasih! Paket langganan sehatmu kini telah aktif dan jadwal pengiriman sudah terkonfirmasi ke dapur mitra.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMd,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              AppPrimaryButton(
+                text: 'Ke Beranda',
                 onPressed: () {
-                  // FIX MAJOR BUG: Navigasi kembali ke Beranda (HomeScreen), bukan ke Kalkulator Gizi!
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const HomeScreen()),
                     (route) => false,
                   );
                 },
-                child: const Text(
-                  'KEMBALI KE BERANDA',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              )
+              ),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Transaksi gagal: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showFloatingSnackBar('Transaksi gagal: $e');
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -94,131 +123,194 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final paket = widget.selectedPackage;
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+    final diskon = _voucherDipakai ? 50000 : 0;
+    final totalBayar = (paket.harga - diskon).clamp(0, paket.harga);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Pembayaran'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Ringkasan Pesanan',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            const StepperHeader(
+              currentStep: 2,
+              totalSteps: 3,
+              title: 'Konfirmasi & Pembayaran',
+              subtitle: 'Selesaikan transaksi untuk mengaktifkan langganan',
             ),
-            const SizedBox(height: 15),
-
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.pagePadding),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            paket.namaPaket,
-                            style: const TextStyle(fontSize: 16),
+                    // Ringkasan Pesanan Kartu Putih
+                    Text('Ringkasan Pesanan', style: AppTypography.titleMd),
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: AppShadows.card,
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    paket.namaPaket,
+                                    style: AppTypography.titleMd.copyWith(fontSize: 15),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${paket.durasiHari} hari pengiriman (3x makan)',
+                                    style: AppTypography.bodySm,
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                currencyFormatter.format(paket.harga),
+                                style: AppTypography.price,
+                              ),
+                            ],
                           ),
-                        ),
-                        Text(
-                          'Rp ${paket.harga}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: AppSpacing.md),
+                          const Divider(),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Ongkos Kirim', style: AppTypography.bodyMd),
+                              Text(
+                                'Gratis',
+                                style: AppTypography.bodyMd.copyWith(
+                                  color: AppColors.brandGreen,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          if (_voucherDipakai) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Diskon Promo', style: AppTypography.bodyMd),
+                                Text(
+                                  '-Rp50.000',
+                                  style: AppTypography.bodyMd.copyWith(
+                                    color: AppColors.accentRed,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.md),
+                          const Divider(),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Tagihan',
+                                style: AppTypography.titleMd.copyWith(fontSize: 16),
+                              ),
+                              Text(
+                                currencyFormatter.format(totalBayar),
+                                style: AppTypography.metric.copyWith(
+                                  fontSize: 20,
+                                  color: AppColors.brandGreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    const Divider(height: 30),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Ongkos Kirim', style: TextStyle(fontSize: 16)),
-                        Text(
-                          'Gratis',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // InfoBanner Voucher Promo
+                    InfoBanner(
+                      text: _voucherDipakai
+                          ? 'Voucher NUTRISEHAT hemat Rp50.000 terpasang!'
+                          : 'Ada voucher diskon Rp50.000 untuk paket ini.',
+                      actionText: _voucherDipakai ? 'Batal' : 'Pakai',
+                      onAction: () {
+                        setState(() => _voucherDipakai = !_voucherDipakai);
+                      },
                     ),
-                    const Divider(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Bayar',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Rp ${paket.harga}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Metode Pembayaran
+                    Text('Metode Pembayaran', style: AppTypography.titleMd),
+                    const SizedBox(height: AppSpacing.sm),
+                    OptionTile(
+                      title: 'GoPay / GoPay Later',
+                      subtitle: 'Bayar instan dan praktis',
+                      leading: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: AppColors.walletTeal,
+                        size: 26,
+                      ),
+                      selected: _metodePembayaran == 'GoPay',
+                      onTap: () => setState(() => _metodePembayaran = 'GoPay'),
                     ),
+                    OptionTile(
+                      title: 'Transfer Bank (BCA / Mandiri / BNI)',
+                      subtitle: 'Konfirmasi otomatis via Virtual Account',
+                      leading: const Icon(
+                        Icons.account_balance_outlined,
+                        color: AppColors.accentBlue,
+                        size: 26,
+                      ),
+                      selected: _metodePembayaran == 'Transfer Bank',
+                      onTap: () => setState(() => _metodePembayaran = 'Transfer Bank'),
+                    ),
+                    OptionTile(
+                      title: 'OVO / DANA / QRIS',
+                      subtitle: 'Scan QRIS dari aplikasi e-wallet apa saja',
+                      leading: const Icon(
+                        Icons.qr_code_scanner_outlined,
+                        color: AppColors.accentPurple,
+                        size: 26,
+                      ),
+                      selected: _metodePembayaran == 'QRIS',
+                      onTap: () => setState(() => _metodePembayaran = 'QRIS'),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 30),
-            const Text(
-              'Metode Pembayaran',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // CTA Bayar withPrice
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.pagePadding),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                boxShadow: AppShadows.top,
+              ),
+              child: AppPrimaryButton.withPrice(
+                text: 'Bayar Sekarang',
+                subtitle: _metodePembayaran,
+                price: currencyFormatter.format(totalBayar),
+                isLoading: _isProcessing,
+                onPressed: _prosesPembayaran,
+              ),
             ),
-            const SizedBox(height: 10),
-
-            DropdownButtonFormField<String>(
-              initialValue: _metodePembayaran,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(
-                  value: 'Transfer Bank',
-                  child: Text('Transfer Bank (BCA/Mandiri)'),
-                ),
-                DropdownMenuItem(
-                  value: 'E-Wallet',
-                  child: Text('E-Wallet (GoPay/OVO)'),
-                ),
-              ],
-              onChanged: (val) {
-                if (val != null) setState(() => _metodePembayaran = val);
-              },
-            ),
-
-            const Spacer(),
-
-            _isProcessing
-                ? const Center(child: CircularProgressIndicator(color: Colors.green))
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: _prosesPembayaran,
-                    child: const Text(
-                      'BAYAR SEKARANG',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
           ],
         ),
       ),

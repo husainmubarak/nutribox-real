@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../data/kitchen_repository.dart';
 import '../../models/delivery_manifest_item.dart';
 
@@ -11,9 +13,24 @@ class DeliveryManifestScreen extends ConsumerStatefulWidget {
       _DeliveryManifestScreenState();
 }
 
-class _DeliveryManifestScreenState
-    extends ConsumerState<DeliveryManifestScreen> {
+class _DeliveryManifestScreenState extends ConsumerState<DeliveryManifestScreen> {
   String? _updatingKey;
+
+  void _showFloatingSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTypography.bodySm.copyWith(color: AppColors.surface),
+        ),
+        backgroundColor: isError ? AppColors.textPrimary : AppColors.brandGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+  }
 
   Future<void> _tandaiDikirim(DeliveryManifestItem item) async {
     final key = "${item.userId}_${item.waktuMakan}";
@@ -27,26 +44,15 @@ class _DeliveryManifestScreenState
         alamatId: item.alamatId,
       );
 
-      // Refresh data manifest dan dasbor secara reaktif
       ref.invalidate(deliveryManifestProvider);
       ref.invalidate(kitchenDashboardProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Status pengiriman diubah ke Dikirim!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showFloatingSnackBar('Status paket berhasil diubah ke Dikirim!', isError: false);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memperbarui status: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showFloatingSnackBar('Gagal memperbarui status: $e');
       }
     } finally {
       if (mounted) setState(() => _updatingKey = null);
@@ -58,29 +64,38 @@ class _DeliveryManifestScreenState
     final manifestAsync = ref.watch(deliveryManifestProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Daftar Pengiriman'),
-        backgroundColor: Colors.orange,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Manifest Pengiriman'),
       ),
       body: manifestAsync.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: Colors.orange),
+          child: CircularProgressIndicator(
+            color: AppColors.brandGreen,
+            strokeWidth: 3,
+          ),
         ),
         error: (err, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 10),
-                Text('Gagal memuat manifest: $err', textAlign: TextAlign.center),
-                const SizedBox(height: 15),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppColors.accentRed,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Gagal memuat manifest: $err',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMd,
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                   onPressed: () => ref.invalidate(deliveryManifestProvider),
-                  child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+                  child: const Text('Coba Lagi'),
                 ),
               ],
             ),
@@ -93,12 +108,17 @@ class _DeliveryManifestScreenState
                 ref.invalidate(deliveryManifestProvider);
                 await ref.read(deliveryManifestProvider.future);
               },
-              color: Colors.orange,
+              color: AppColors.brandGreen,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 100),
-                  Center(child: Text('Tidak ada jadwal pengiriman hari ini.')),
+                children: [
+                  const SizedBox(height: 120),
+                  Center(
+                    child: Text(
+                      'Tidak ada jadwal pengiriman untuk hari ini.',
+                      style: AppTypography.bodyMd,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -109,10 +129,10 @@ class _DeliveryManifestScreenState
               ref.invalidate(deliveryManifestProvider);
               await ref.read(deliveryManifestProvider.future);
             },
-            color: Colors.orange,
+            color: AppColors.brandGreen,
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(15),
+              padding: const EdgeInsets.all(AppSpacing.pagePadding),
               itemCount: daftarKirim.length,
               itemBuilder: (context, index) {
                 final item = daftarKirim[index];
@@ -120,94 +140,96 @@ class _DeliveryManifestScreenState
                 final isUpdating = _updatingKey == key;
                 final bool sudahDikirim = item.isDelivered;
 
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 15),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              item.namaUser,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: sudahDikirim
-                                    ? Colors.green.shade100
-                                    : Colors.orange.shade100,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                sudahDikirim ? 'DIKIRIM ✓' : 'DIMASAK',
-                                style: TextStyle(
-                                  color: sudahDikirim ? Colors.green : Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        // FIX: Format string yang benar
-                        Text(
-                          'Paket: ${item.targetDiet} | Sesi: ${item.waktuMakan}',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const Divider(),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.location_on, size: 16, color: Colors.red),
-                            const SizedBox(width: 5),
-                            // FIX: Format teks alamat yang benar dan rapi
-                            Expanded(
-                              child: Text(
-                                '${item.labelAlamat} - ${item.alamatLengkap}',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: sudahDikirim ? Colors.grey : Colors.green,
-                            ),
-                            onPressed: (sudahDikirim || isUpdating)
-                                ? null
-                                : () => _tandaiDikirim(item),
-                            child: isUpdating
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    sudahDikirim ? 'Selesai' : 'Tandai Dikirim',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.all(AppSpacing.md + 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    boxShadow: AppShadows.card,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            item.namaUser,
+                            style: AppTypography.titleMd.copyWith(fontSize: 16),
                           ),
-                        )
-                      ],
-                    ),
+                          StatusBadge(
+                            label: sudahDikirim ? 'Terkirim ✓' : 'Dimasak',
+                            tone: sudahDikirim
+                                ? StatusBadgeTone.green
+                                : StatusBadgeTone.yellow,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Program: ${item.targetDiet}  •  Sesi: ${item.waktuMakan}',
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Divider(),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 16,
+                            color: AppColors.brandGreen,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              '${item.labelAlamat}: ${item.alamatLengkap}',
+                              style: AppTypography.bodySm,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: sudahDikirim
+                                ? AppColors.textSecondary
+                                : AppColors.brandGreen,
+                            side: BorderSide(
+                              color: sudahDikirim
+                                  ? AppColors.divider
+                                  : AppColors.brandGreen,
+                            ),
+                            shape: const StadiumBorder(),
+                          ),
+                          onPressed: (sudahDikirim || isUpdating)
+                              ? null
+                              : () => _tandaiDikirim(item),
+                          child: isUpdating
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.brandGreen,
+                                  ),
+                                )
+                              : Text(
+                                  sudahDikirim ? 'Pengiriman Selesai' : 'Tandai Selesai Masak / Dikirim',
+                                  style: AppTypography.label.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },

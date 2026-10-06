@@ -13,8 +13,13 @@ final authStateChangesProvider = StreamProvider<AuthState>((ref) {
 });
 
 /// Provider user saat ini (nullable)
+/// Membaca langsung dari Supabase auth tanpa bergantung pada
+/// async state stream agar tidak mengembalikan null saat stream
+/// belum mengirimkan event pertama (misal setelah registrasi).
 final currentUserProvider = Provider<User?>((ref) {
-  // Re-evaluate saat authState berubah
+  // Tetap watch stream agar provider di-rebuild saat auth state berubah
   ref.watch(authStateChangesProvider);
-  return ref.watch(supabaseClientProvider).auth.currentUser;
+  // Gunakan Supabase.instance.client sebagai sumber kebenaran agar
+  // tidak tergantung pada apakah stream sudah emit event atau belum
+  return Supabase.instance.client.auth.currentUser;
 });

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/app_primary_button.dart';
 import '../../data/kitchen_repository.dart';
 import '../../models/daily_menu_model.dart';
 
@@ -34,15 +36,26 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
     super.dispose();
   }
 
+  void _showFloatingSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTypography.bodySm.copyWith(color: AppColors.surface),
+        ),
+        backgroundColor: isError ? AppColors.textPrimary : AppColors.brandGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+  }
+
   Future<void> _simpanMenu() async {
     final namaMenu = _namaMenuController.text.trim();
     if (namaMenu.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nama menu tidak boleh kosong!'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showFloatingSnackBar('Nama menu tidak boleh kosong!');
       return;
     }
 
@@ -64,22 +77,12 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Menu berhasil disimpan!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showFloatingSnackBar('Menu sehat harian berhasil disimpan!', isError: false);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan menu: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showFloatingSnackBar('Gagal menyimpan menu: $e');
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -89,75 +92,89 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Input Menu Hari Ini'),
-        backgroundColor: Colors.orange,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Input Menu Harian'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Target Diet', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 5),
-            DropdownButtonFormField<String>(
-              initialValue: _targetDietTerpilih,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: AppConstants.listPilihanDiet.map((diet) {
-                return DropdownMenuItem(value: diet, child: Text(diet));
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _targetDietTerpilih = val);
-              },
-            ),
-            const SizedBox(height: 20),
-
-            const Text('Waktu Makan', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 5),
-            DropdownButtonFormField<String>(
-              initialValue: _waktuMakanTerpilih,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: AppConstants.listWaktuMakan.map((waktu) {
-                return DropdownMenuItem(value: waktu, child: Text(waktu));
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _waktuMakanTerpilih = val);
-              },
-            ),
-            const SizedBox(height: 20),
-
-            TextField(
-              controller: _namaMenuController,
-              decoration: const InputDecoration(
-                labelText: 'Nama Menu (Cth: Ayam Bakar)',
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            TextField(
-              controller: _deskripsiController,
-              decoration: const InputDecoration(
-                labelText: 'Deskripsi Singkat',
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 30),
-
-            _isProcessing
-                ? const Center(child: CircularProgressIndicator(color: Colors.orange))
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.pagePadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  boxShadow: AppShadows.card,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Program Diet', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.xs),
+                    DropdownButtonFormField<String>(
+                      initialValue: _targetDietTerpilih,
+                      style: AppTypography.bodyMd,
+                      decoration: const InputDecoration(),
+                      items: AppConstants.listPilihanDiet.map((diet) {
+                        return DropdownMenuItem(value: diet, child: Text(diet));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _targetDietTerpilih = val);
+                      },
                     ),
-                    onPressed: _simpanMenu,
-                    child: const Text(
-                      'SIMPAN MENU',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    Text('Waktu Makan', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.xs),
+                    DropdownButtonFormField<String>(
+                      initialValue: _waktuMakanTerpilih,
+                      style: AppTypography.bodyMd,
+                      decoration: const InputDecoration(),
+                      items: AppConstants.listWaktuMakan.map((waktu) {
+                        return DropdownMenuItem(value: waktu, child: Text(waktu));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _waktuMakanTerpilih = val);
+                      },
                     ),
-                  ),
-          ],
+                    const SizedBox(height: AppSpacing.lg),
+
+                    Text('Nama Menu Masakan', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextField(
+                      controller: _namaMenuController,
+                      style: AppTypography.bodyMd,
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: Salmon Panggang Lemon Herb',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    Text('Deskripsi & Kandungan Gizi (Opsional)', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextField(
+                      controller: _deskripsiController,
+                      style: AppTypography.bodyMd,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Dilengkapi sayuran brokoli kukus dan nasi merah organik...',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+
+                    AppPrimaryButton(
+                      text: 'Simpan Menu Hari Ini',
+                      isLoading: _isProcessing,
+                      onPressed: _simpanMenu,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

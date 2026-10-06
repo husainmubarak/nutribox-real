@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/app_primary_button.dart';
 import '../../data/auth_repository.dart';
 import '../controllers/auth_controller.dart';
 import '../../../home/presentation/screens/home_screen.dart';
@@ -26,7 +28,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
 
-    // Jalankan pemeriksaan status auto-login setelah frame pertama
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAutoLogin();
     });
@@ -75,17 +76,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
+  void _showFloatingSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTypography.bodySm.copyWith(color: AppColors.surface),
+        ),
+        backgroundColor: isError ? AppColors.textPrimary : AppColors.brandGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitAuth() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email dan password wajib diisi!'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showFloatingSnackBar('Email dan password wajib diisi!');
       return;
     }
 
@@ -103,9 +115,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final errorMsg = authState.hasError
           ? authState.error.toString()
           : 'Terjadi kesalahan pada otentikasi.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      _showFloatingSnackBar(errorMsg);
     }
   }
 
@@ -116,93 +126,198 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     if (_isCheckingAutoLogin) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         body: Center(
-          child: CircularProgressIndicator(color: Colors.green),
+          child: CircularProgressIndicator(
+            color: AppColors.brandGreen,
+            strokeWidth: 3,
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.food_bank, size: 100, color: Colors.green),
-              const SizedBox(height: 10),
-              const Text(
-                'NutriBox',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 24),
-
-              isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.green),
-                    )
-                  : ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      onPressed: _submitAuth,
-                      child: Text(
-                        _isLogin ? 'MASUK' : 'DAFTAR SEKARANG',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.pagePadding),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Header Logo NutriBox
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandGreenSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.sheet),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.lunch_dining_rounded,
+                      size: 40,
+                      color: AppColors.brandGreen,
                     ),
-
-              const SizedBox(height: 16),
-
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isLogin = !_isLogin;
-                  });
-                },
-                child: Text(
-                  _isLogin
-                      ? 'Belum punya akun? Daftar di sini'
-                      : 'Sudah punya akun? Masuk di sini',
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'NutriBox',
+                  style: AppTypography.titleLg.copyWith(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brandGreen,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Catering Sehat Berlangganan Setiap Hari',
+                  style: AppTypography.bodySm,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+
+                // Card Utama
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    boxShadow: AppShadows.card,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Tab Segmented Masuk & Daftar
+                      Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _isLogin = true),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: _isLogin
+                                        ? AppColors.surface
+                                        : Colors.transparent,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.pill),
+                                    boxShadow:
+                                        _isLogin ? AppShadows.card : null,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Masuk',
+                                      style: AppTypography.label.copyWith(
+                                        color: _isLogin
+                                            ? AppColors.brandGreen
+                                            : AppColors.textSecondary,
+                                        fontWeight: _isLogin
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _isLogin = false),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: !_isLogin
+                                        ? AppColors.surface
+                                        : Colors.transparent,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.pill),
+                                    boxShadow:
+                                        !_isLogin ? AppShadows.card : null,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Daftar Baru',
+                                      style: AppTypography.label.copyWith(
+                                        color: !_isLogin
+                                            ? AppColors.brandGreen
+                                            : AppColors.textSecondary,
+                                        fontWeight: !_isLogin
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Input Fields
+                      Text(
+                        'Email',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextField(
+                        controller: _emailController,
+                        style: AppTypography.bodyMd,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          hintText: 'nama@email.com',
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      Text(
+                        'Password',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextField(
+                        controller: _passwordController,
+                        style: AppTypography.bodyMd,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Minimal 6 karakter',
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+
+                      // CTA Button
+                      AppPrimaryButton(
+                        text: _isLogin ? 'Masuk' : 'Daftar Sekarang',
+                        isLoading: isLoading,
+                        onPressed: _submitAuth,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/profile_repository.dart';
 import '../../models/user_profile.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../auth/data/auth_repository.dart';
 
 class NutritionCalculationResult {
   final double bmi;
@@ -86,7 +87,10 @@ class NutritionCalculatorController extends Notifier<AsyncValue<NutritionCalcula
   }) async {
     state = const AsyncValue.loading();
     try {
-      final user = ref.read(currentUserProvider);
+      // Coba currentUserProvider dulu, jika null ambil dari AuthRepository
+      // (bisa terjadi saat stream authState belum emit setelah registrasi)
+      final user = ref.read(currentUserProvider) ??
+          ref.read(authRepositoryProvider).currentUser;
       if (user == null) {
         throw Exception('User belum terautentikasi');
       }

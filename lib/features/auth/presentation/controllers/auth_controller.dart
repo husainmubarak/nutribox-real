@@ -63,6 +63,12 @@ class AuthController extends Notifier<AsyncValue<UserRole?>> {
         return null;
       }
 
+      // Pastikan session aktif di client. Jika signUp tidak langsung menghasilkan session,
+      // lakukan auto-login agar token autentikasi terpasang sebelum navigasi ke profil.
+      if (_repository.currentSession == null) {
+        await _repository.signIn(email: email, password: password);
+      }
+
       // User baru selalu belum punya profil gizi
       const role = UserRole.customerWithoutProfile;
       state = const AsyncValue.data(role);

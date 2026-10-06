@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/app_primary_button.dart';
+import '../../../../core/widgets/service_grid.dart';
+import '../../../../core/widgets/service_grid_item.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/screens/auth_screen.dart';
 import '../../data/kitchen_repository.dart';
@@ -14,12 +18,12 @@ class KitchenDashboardScreen extends ConsumerWidget {
     final dashboardAsync = ref.watch(kitchenDashboardProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('NutriBox - Mitra'),
-        backgroundColor: Colors.orange,
+        title: const Text('NutriBox Dapur'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: const Icon(Icons.logout_rounded),
             tooltip: 'Keluar',
             onPressed: () async {
               await ref.read(authControllerProvider.notifier).signOut();
@@ -30,7 +34,7 @@ class KitchenDashboardScreen extends ConsumerWidget {
                 (route) => false,
               );
             },
-          )
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -40,28 +44,44 @@ class KitchenDashboardScreen extends ConsumerWidget {
             MaterialPageRoute(builder: (_) => const MenuInputScreen()),
           );
         },
-        backgroundColor: Colors.orange,
-        icon: const Icon(Icons.edit_document, color: Colors.white),
-        label: const Text('Isi Menu', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.brandGreen,
+        icon: const Icon(Icons.add, color: AppColors.surface),
+        label: const Text(
+          'Input Menu',
+          style: TextStyle(
+            color: AppColors.surface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: dashboardAsync.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: Colors.orange),
+          child: CircularProgressIndicator(
+            color: AppColors.brandGreen,
+            strokeWidth: 3,
+          ),
         ),
         error: (err, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 10),
-                Text('Gagal memuat dasbor: $err', textAlign: TextAlign.center),
-                const SizedBox(height: 15),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppColors.accentRed,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Gagal memuat data dasbor: $err',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMd,
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                   onPressed: () => ref.invalidate(kitchenDashboardProvider),
-                  child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+                  child: const Text('Coba Lagi'),
                 ),
               ],
             ),
@@ -73,132 +93,179 @@ class KitchenDashboardScreen extends ConsumerWidget {
               ref.invalidate(kitchenDashboardProvider);
               await ref.read(kitchenDashboardProvider.future);
             },
-            color: Colors.orange,
+            color: AppColors.brandGreen,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.pagePadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     data.namaDapur,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: AppTypography.titleLg.copyWith(fontSize: 22),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 2),
                   Text(
-                    'Rekap Pesanan: ${data.hariIni}',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    'Rekap Operasional: ${data.hariIni}',
+                    style: AppTypography.bodySm,
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: AppSpacing.lg),
 
-                  // KARTU TOTAL PORSI
+                  // KARTU TOTAL PORSI (Gaya SubscriptionCard)
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(AppSpacing.xl),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.orange, Colors.deepOrange.shade400],
-                      ),
-                      borderRadius: BorderRadius.circular(15),
+                      gradient: AppColors.brandGradient,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      boxShadow: AppShadows.card,
                     ),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           'TOTAL PORSI HARI INI',
-                          style: TextStyle(
-                            color: Colors.white,
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.surface.withValues(alpha: 0.9),
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           '${data.totalPorsi}',
-                          style: const TextStyle(
+                          style: AppTypography.metric.copyWith(
                             fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: AppColors.surface,
                           ),
                         ),
-                        const Text(
-                          'Porsi Makanan',
-                          style: TextStyle(color: Colors.white70),
+                        Text(
+                          'Porsi Makanan Siap Masak',
+                          style: AppTypography.bodySm.copyWith(
+                            color: AppColors.surface.withValues(alpha: 0.9),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: AppSpacing.xl),
 
-                  const Text(
-                    'Rincian Berdasarkan Program Diet',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  // PINTASAN AKSI CEPAT
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      boxShadow: AppShadows.card,
+                    ),
+                    child: ServiceGrid(
+                      items: [
+                        ServiceGridItem(
+                          icon: Icons.delivery_dining_outlined,
+                          label: 'Manifest',
+                          tone: ServiceGridTone.green,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const DeliveryManifestScreen(),
+                            ),
+                          ),
+                        ),
+                        ServiceGridItem(
+                          icon: Icons.restaurant_menu_outlined,
+                          label: 'Input Menu',
+                          tone: ServiceGridTone.yellow,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MenuInputScreen(),
+                            ),
+                          ),
+                        ),
+                        ServiceGridItem(
+                          icon: Icons.history_outlined,
+                          label: 'Riwayat',
+                          tone: ServiceGridTone.blue,
+                          onTap: () {},
+                        ),
+                        ServiceGridItem(
+                          icon: Icons.settings_outlined,
+                          label: 'Pengaturan',
+                          tone: ServiceGridTone.neutral,
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.xl),
 
-                  // LIST RINCIAN PESANAN
+                  Text(
+                    'Rincian Berdasarkan Program Diet',
+                    style: AppTypography.titleMd,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
                   if (data.rekapPesanan.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.0),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: Center(
                         child: Text(
-                          'Belum ada pesanan untuk hari ini.',
-                          style: TextStyle(color: Colors.grey),
+                          'Belum ada pesanan masuk untuk hari ini.',
+                          style: AppTypography.bodySm,
                         ),
                       ),
                     )
                   else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: data.rekapPesanan.keys.length,
-                      itemBuilder: (context, index) {
-                        final String namaDiet =
-                            data.rekapPesanan.keys.elementAt(index);
-                        final int jumlah = data.rekapPesanan[namaDiet]!;
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          elevation: 1,
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Colors.orangeAccent,
-                              child: Icon(Icons.restaurant_menu, color: Colors.white),
-                            ),
-                            title: Text(
-                              namaDiet,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            trailing: Text(
-                              '$jumlah Porsi',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
+                    ...data.rekapPesanan.entries.map((entry) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          boxShadow: AppShadows.card,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.brandGreenSoft,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              child: const Icon(
+                                Icons.restaurant_menu,
+                                color: AppColors.brandGreen,
+                                size: 22,
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Text(
+                                entry.key,
+                                style: AppTypography.titleMd.copyWith(
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${entry.value} Porsi',
+                              style: AppTypography.price.copyWith(
+                                color: AppColors.brandGreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl),
 
-                  // TOMBOL MENUJU DAFTAR PENGIRIMAN
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    icon: const Icon(Icons.delivery_dining, color: Colors.white),
-                    label: const Text(
-                      'LIHAT MANIFEST PENGIRIMAN',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  AppPrimaryButton(
+                    text: 'Lihat Manifest Pengiriman',
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -208,7 +275,7 @@ class KitchenDashboardScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
