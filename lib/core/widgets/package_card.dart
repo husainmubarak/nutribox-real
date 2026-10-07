@@ -53,17 +53,19 @@ class PackageCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
                         children: [
                           Text(
                             namaPaket,
                             style: AppTypography.titleMd.copyWith(
-                              fontSize: 17,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          if (badgeText != null) ...[
-                            const SizedBox(width: AppSpacing.sm),
+                          if (badgeText != null)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppSpacing.sm,
@@ -82,7 +84,6 @@ class PackageCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ],
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -91,18 +92,18 @@ class PackageCard extends StatelessWidget {
                         style: AppTypography.bodySm,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSpacing.xs,
+                        runSpacing: 2,
                         children: [
                           Text(
                             currencyFormatter.format(harga),
                             style: AppTypography.price.copyWith(
-                              fontSize: 18,
+                              fontSize: 17,
                               color: AppColors.brandGreen,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.xs),
                           Text(
                             '(${currencyFormatter.format(hargaPerHari)}/hari)',
                             style: AppTypography.bodySm.copyWith(

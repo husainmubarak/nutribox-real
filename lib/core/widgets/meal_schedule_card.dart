@@ -133,18 +133,24 @@ class MealScheduleCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            waktuMakan,
-                            style: AppTypography.label.copyWith(
-                              color: mealColor,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              waktuMakan,
+                              style: AppTypography.label.copyWith(
+                                color: mealColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (statusPengiriman != null)
+                          if (statusPengiriman != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
                             StatusBadge(
                               label: statusPengiriman!,
                               tone: _getStatusTone(statusPengiriman),
                             ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -155,37 +161,47 @@ class MealScheduleCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSpacing.sm,
+                        runSpacing: 2,
                         children: [
-                          if (jamKirim != null) ...[
-                            Icon(
-                              Icons.access_time,
-                              size: 13,
-                              color: AppColors.textSecondary,
+                          if (jamKirim != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.access_time,
+                                  size: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  jamKirim!,
+                                  style: AppTypography.bodySm.copyWith(fontSize: 11),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 3),
-                            Text(
-                              jamKirim!,
-                              style: AppTypography.bodySm.copyWith(fontSize: 11),
+                          if (kalori != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.local_fire_department_outlined,
+                                  size: 13,
+                                  color: AppColors.accentOrange,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '$kalori kkal',
+                                  style: AppTypography.bodySm.copyWith(
+                                    fontSize: 11,
+                                    color: AppColors.accentOrange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                          ],
-                          if (kalori != null) ...[
-                            Icon(
-                              Icons.local_fire_department_outlined,
-                              size: 13,
-                              color: AppColors.accentOrange,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              '$kalori kkal',
-                              style: AppTypography.bodySm.copyWith(
-                                fontSize: 11,
-                                color: AppColors.accentOrange,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                       if (alamatSingkat != null) ...[

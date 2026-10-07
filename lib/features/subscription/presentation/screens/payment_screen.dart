@@ -164,22 +164,28 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                       child: Column(
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    paket.namaPaket,
-                                    style: AppTypography.titleMd.copyWith(fontSize: 15),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${paket.durasiHari} hari pengiriman (3x makan)',
-                                    style: AppTypography.bodySm,
-                                  ),
-                                ],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      paket.namaPaket,
+                                      style: AppTypography.titleMd.copyWith(fontSize: 15),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${paket.durasiHari} hari pengiriman (3x makan)',
+                                      style: AppTypography.bodySm,
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: AppSpacing.sm),
                               Text(
                                 currencyFormatter.format(paket.harga),
                                 style: AppTypography.price,
@@ -224,10 +230,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Total Tagihan',
-                                style: AppTypography.titleMd.copyWith(fontSize: 16),
+                              Expanded(
+                                child: Text(
+                                  'Total Tagihan',
+                                  style: AppTypography.titleMd.copyWith(fontSize: 16),
+                                ),
                               ),
+                              const SizedBox(width: AppSpacing.sm),
                               Text(
                                 currencyFormatter.format(totalBayar),
                                 style: AppTypography.metric.copyWith(

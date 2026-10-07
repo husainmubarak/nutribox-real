@@ -104,13 +104,12 @@ class SubscriptionCard extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.sm),
 
               // Kanan: 3 aksi cepat (Jadwal, Alamat, Bantuan)
               Expanded(
                 flex: 4,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildQuickAction(
                       icon: Icons.calendar_month_outlined,
@@ -142,39 +141,44 @@ class SubscriptionCard extends StatelessWidget {
     required String label,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: AppColors.surface.withValues(alpha: 0.35),
-                width: 1,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.surface.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppColors.surface.withValues(alpha: 0.35),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                icon,
+                color: AppColors.surface,
+                size: 18,
               ),
             ),
-            child: Icon(
-              icon,
-              color: AppColors.surface,
-              size: 20,
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.surface,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.surface,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

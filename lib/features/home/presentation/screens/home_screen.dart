@@ -320,7 +320,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       readTime: '2 menit baca',
                     ),
 
-                    const SizedBox(height: AppSpacing.xxl),
+                    const SizedBox(height: 88),
                   ],
                 ),
               ),
@@ -559,11 +559,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.pagePadding),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.pagePadding,
+              vertical: AppSpacing.sm,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Jadwal Pengiriman', style: AppTypography.titleLg),
+                Expanded(
+                  child: Text(
+                    'Jadwal Pengiriman',
+                    style: AppTypography.titleLg,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
                 TextButton.icon(
                   onPressed: () => Navigator.push(
                     context,
@@ -573,6 +584,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   label: const Text('Atur Alamat'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.brandGreen,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
               ],
@@ -585,8 +598,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.pagePadding,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pagePadding,
+                0,
+                AppSpacing.pagePadding,
+                88,
               ),
               children: [
                 MealScheduleCard(
@@ -635,8 +651,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.pagePadding,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pagePadding,
+                0,
+                AppSpacing.pagePadding,
+                88,
               ),
               children: [
                 _buildRiwayatCard(
@@ -682,7 +701,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(namaPaket, style: AppTypography.titleMd),
+              Expanded(
+                child: Text(
+                  namaPaket,
+                  style: AppTypography.titleMd,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
@@ -735,7 +762,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildAkunTab(HomeDashboardData data) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.pagePadding),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.pagePadding,
+          AppSpacing.pagePadding,
+          AppSpacing.pagePadding,
+          88,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

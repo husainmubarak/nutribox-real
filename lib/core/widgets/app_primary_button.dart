@@ -52,7 +52,7 @@ class AppPrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.pill),
             onTap: effectiveEnabled ? onPressed : null,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Center(
                 child: isLoading
                     ? const SizedBox(
@@ -65,43 +65,50 @@ class AppPrimaryButton extends StatelessWidget {
                       )
                     : price != null
                         ? Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    text,
-                                    style: AppTypography.cta,
-                                  ),
-                                  if (subtitle != null)
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      subtitle!,
-                                      style: AppTypography.bodySm.copyWith(
-                                        color: AppColors.surface.withValues(alpha: 0.85),
-                                        fontSize: 10,
-                                      ),
+                                      text,
+                                      style: AppTypography.cta.copyWith(fontSize: 15),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                ],
+                                    if (subtitle != null)
+                                      Text(
+                                        subtitle!,
+                                        style: AppTypography.bodySm.copyWith(
+                                          color: AppColors.surface.withValues(alpha: 0.85),
+                                          fontSize: 11,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: AppSpacing.sm),
                               Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     price!,
-                                    style: AppTypography.cta,
+                                    style: AppTypography.cta.copyWith(fontSize: 15),
                                   ),
-                                  const SizedBox(width: AppSpacing.sm),
+                                  const SizedBox(width: AppSpacing.xs + 2),
                                   Container(
-                                    width: 28,
-                                    height: 28,
+                                    width: 26,
+                                    height: 26,
                                     decoration: const BoxDecoration(
                                       color: AppColors.surface,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
                                       Icons.arrow_forward,
-                                      size: 16,
+                                      size: 15,
                                       color: AppColors.brandGreen,
                                     ),
                                   ),
@@ -114,6 +121,8 @@ class AppPrimaryButton extends StatelessWidget {
                             style: AppTypography.cta.copyWith(
                               color: effectiveEnabled ? AppColors.surface : AppColors.textSecondary,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
               ),
             ),

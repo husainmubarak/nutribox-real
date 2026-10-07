@@ -44,29 +44,37 @@ class CalorieSummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              StatusBadge(
-                label: 'Status: $statusBmi',
-                tone: _getTone(statusBmi),
+              Flexible(
+                child: StatusBadge(
+                  label: 'Status: $statusBmi',
+                  tone: _getTone(statusBmi),
+                ),
               ),
-              if (programName != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm + 2,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Text(
-                    programName!,
-                    style: const TextStyle(
-                      color: AppColors.surface,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+              if (programName != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm + 2,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      programName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.surface,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.md),
