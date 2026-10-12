@@ -49,9 +49,9 @@ class AuthRepository {
         .from(AppConstants.tableMitraDapur)
         .select('id')
         .eq('id', userId)
-        .maybeSingle();
+        .limit(1);
 
-    if (mitraData != null) {
+    if (mitraData.isNotEmpty) {
       return UserRole.kitchenPartner;
     }
 
@@ -60,9 +60,10 @@ class AuthRepository {
         .from(AppConstants.tableUsers)
         .select('target_diet')
         .eq('id', userId)
-        .maybeSingle();
+        .limit(1);
 
-    if (userProfile != null && userProfile['target_diet'] != null) {
+    if (userProfile.isNotEmpty &&
+        userProfile.first['target_diet'] != null) {
       return UserRole.customerWithProfile;
     }
 

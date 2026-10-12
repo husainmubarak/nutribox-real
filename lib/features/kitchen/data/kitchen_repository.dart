@@ -22,9 +22,11 @@ class KitchenRepository {
         .from(AppConstants.tableMitraDapur)
         .select('nama_dapur')
         .eq('id', mitraId)
-        .maybeSingle();
+        .limit(1);
 
-    final namaDapur = dataDapur?['nama_dapur'] ?? 'Dapur Mitra';
+    final namaDapur = dataDapur.isNotEmpty
+        ? dataDapur.first['nama_dapur'] ?? 'Dapur Mitra'
+        : 'Dapur Mitra';
 
     // 2. Ambil ID Pelanggan yang paket langganannya aktif hari ini
     final daftarTransaksiAktif = await _client
@@ -97,14 +99,14 @@ class KitchenRepository {
         .eq('tanggal', menu.tanggal)
         .eq('target_diet', normalizedDiet)
         .eq('waktu_makan', menu.waktuMakan)
-        .maybeSingle();
+        .limit(1);
 
-    if (existingMenu != null) {
+    if (existingMenu.isNotEmpty) {
       // Update menu yang sudah ada
       await _client.from(AppConstants.tableMasterMenuHarian).update({
         'nama_menu': menu.namaMenu,
         'deskripsi': menu.deskripsi,
-      }).eq('id', existingMenu['id']);
+      }).eq('id', existingMenu.first['id']);
     } else {
       // Insert menu baru
       await _client.from(AppConstants.tableMasterMenuHarian).insert({
@@ -217,13 +219,13 @@ class KitchenRepository {
         .eq('tanggal', tanggalHariIni)
         .eq('user_id', userId)
         .eq('waktu_makan', waktuMakan)
-        .maybeSingle();
+        .limit(1);
 
-    if (cekLog != null) {
+    if (cekLog.isNotEmpty) {
       await _client
           .from(AppConstants.tableMenuHarian)
           .update({'status_pengiriman': AppConstants.statusDikirim})
-          .eq('id', cekLog['id']);
+          .eq('id', cekLog.first['id']);
     } else {
       await _client.from(AppConstants.tableMenuHarian).insert({
         'user_id': userId,

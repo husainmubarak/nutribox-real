@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
 import '../../../../core/widgets/app_chip.dart';
@@ -15,6 +17,7 @@ import '../../../../core/widgets/week_day_chips.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/screens/auth_screen.dart';
 import '../../../profile/presentation/screens/nutrition_calculator_screen.dart';
+import '../../../subscription/data/subscription_repository.dart';
 import '../../../subscription/presentation/screens/address_book_screen.dart';
 import '../../../subscription/presentation/screens/package_selection_screen.dart';
 import '../../data/home_repository.dart';
@@ -641,38 +644,180 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // TAB 2: RIWAYAT PESANAN
   // ==========================================
   Widget _buildRiwayatTab(HomeDashboardData data) {
+    final historyAsync = ref.watch(subscriptionHistoryProvider);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.pagePadding),
-            child: Text('Riwayat Langganan', style: AppTypography.titleLg),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.pagePadding,
-                0,
-                AppSpacing.pagePadding,
-                88,
-              ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.pagePadding,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildRiwayatCard(
-                  namaPaket: data.namaPaket,
-                  tgl: 'Aktif saat ini',
-                  status: 'Lunas',
-                  total: 'Rp950.000',
-                  isActive: true,
+                Expanded(
+                  child: Text('Riwayat Langganan', style: AppTypography.titleLg),
                 ),
-                _buildRiwayatCard(
-                  namaPaket: 'Paket Langganan 1 Bulan',
-                  tgl: '15 Agustus 2026',
-                  status: 'Selesai',
-                  total: 'Rp950.000',
-                  isActive: false,
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: AppColors.brandGreen, size: 20),
+                  tooltip: 'Segarkan',
+                  onPressed: () => ref.invalidate(subscriptionHistoryProvider),
                 ),
               ],
+            ),
+          ),
+          Expanded(
+            child: historyAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.brandGreen,
+                  strokeWidth: 3,
+                ),
+              ),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: AppColors.accentRed,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Gagal memuat riwayat: $err',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyMd,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      ElevatedButton(
+                        onPressed: () =>
+                            ref.invalidate(subscriptionHistoryProvider),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (daftarRiwayat) {
+                if (daftarRiwayat.isEmpty) {
+                  return RefreshIndicator(
+                    color: AppColors.brandGreen,
+                    onRefresh: () async {
+                      ref.invalidate(subscriptionHistoryProvider);
+                      await ref.read(subscriptionHistoryProvider.future);
+                    },
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      children: [
+                        const SizedBox(height: 60),
+                        Center(
+                          child: Container(
+                            width: 72,
+                            height: 72,
+                            decoration: const BoxDecoration(
+                              color: AppColors.brandGreenSoft,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long_outlined,
+                              color: AppColors.brandGreen,
+                              size: 36,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'Belum Ada Riwayat Langganan',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.titleMd,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Mulai hidup sehat dengan memesan paket catering bernutrisi pertama Anda sekarang.',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySm,
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PackageSelectionScreen(),
+                              ),
+                            ),
+                            child: const Text('Pilih Paket Langganan'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  color: AppColors.brandGreen,
+                  onRefresh: () async {
+                    ref.invalidate(subscriptionHistoryProvider);
+                    await ref.read(subscriptionHistoryProvider.future);
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.pagePadding,
+                      0,
+                      AppSpacing.pagePadding,
+                      88,
+                    ),
+                    itemCount: daftarRiwayat.length,
+                    itemBuilder: (context, index) {
+                      final item = daftarRiwayat[index];
+
+                      String labelTgl;
+                      if (item.isActive) {
+                        labelTgl =
+                            'Aktif s/d ${DateFormatter.formatIndonesianDate(item.tanggalSelesai)}';
+                      } else if (item.tanggalMulai != null &&
+                          item.tanggalSelesai != null) {
+                        labelTgl =
+                            '${DateFormatter.formatIndonesianDate(item.tanggalMulai)} - ${DateFormatter.formatIndonesianDate(item.tanggalSelesai)}';
+                      } else {
+                        labelTgl = 'Durasi: ${item.durasiHari} hari';
+                      }
+
+                      String statusLabel;
+                      if (item.isActive) {
+                        statusLabel = 'Aktif';
+                      } else if (item.statusBayar.toLowerCase() == 'lunas') {
+                        statusLabel = 'Selesai';
+                      } else {
+                        statusLabel = item.statusBayar;
+                      }
+
+                      final isMenunggu =
+                          item.statusBayar.toLowerCase().contains('menunggu');
+
+                      return _buildRiwayatCard(
+                        namaPaket: item.namaPaket,
+                        tgl: labelTgl,
+                        status: statusLabel,
+                        total: currencyFormatter.format(item.totalHarga),
+                        isActive: item.isActive,
+                        isMenunggu: isMenunggu,
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -686,7 +831,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required String status,
     required String total,
     required bool isActive,
+    bool isMenunggu = false,
   }) {
+    Color badgeBg;
+    Color badgeText;
+    if (isActive) {
+      badgeBg = AppColors.brandGreenSoft;
+      badgeText = AppColors.brandGreen;
+    } else if (isMenunggu) {
+      badgeBg = AppColors.accentOrange.withValues(alpha: 0.15);
+      badgeText = AppColors.accentOrange;
+    } else {
+      badgeBg = AppColors.divider;
+      badgeText = AppColors.textSecondary;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -694,6 +853,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: AppShadows.card,
+        border: isActive
+            ? Border.all(
+                color: AppColors.brandGreen.withValues(alpha: 0.3),
+                width: 1.5,
+              )
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,17 +881,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? AppColors.brandGreenSoft
-                      : AppColors.divider,
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
                   status,
                   style: TextStyle(
-                    color: isActive
-                        ? AppColors.brandGreen
-                        : AppColors.textSecondary,
+                    color: badgeText,
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
@@ -746,7 +907,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Text(
                 total,
                 style: AppTypography.price.copyWith(
-                  color: AppColors.brandGreen,
+                  color: isActive ? AppColors.brandGreen : AppColors.textPrimary,
                 ),
               ),
             ],

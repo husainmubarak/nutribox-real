@@ -14,10 +14,10 @@ class ProfileRepository {
         .from(AppConstants.tableUsers)
         .select()
         .eq('id', userId)
-        .maybeSingle();
+        .limit(1);
 
-    if (response == null) return null;
-    return UserProfile.fromMap(response);
+    if (response.isEmpty) return null;
+    return UserProfile.fromMap(response.first);
   }
 
   Future<void> saveProfile(UserProfile profile) async {

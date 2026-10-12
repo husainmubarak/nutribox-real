@@ -40,4 +40,16 @@ class DateFormatter {
     }
     return age;
   }
+
+  /// Memformat string ISO (YYYY-MM-DD) menjadi format ramah Indonesia (contoh: 25 Oktober 2026)
+  static String formatIndonesianDate(String? isoDateStr) {
+    if (isoDateStr == null || isoDateStr.isEmpty) return '-';
+    final d = DateTime.tryParse(isoDateStr);
+    if (d == null) return isoDateStr;
+    const months = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return '${d.day} ${months[d.month]} ${d.year}';
+  }
 }

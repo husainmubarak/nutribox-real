@@ -66,8 +66,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         simulateImmediateActive: true,
       );
 
-      // Refresh data beranda
+      // Refresh data beranda, status langganan, dan riwayat pesanan
       ref.invalidate(homeDashboardProvider);
+      ref.invalidate(activeSubscriptionProvider);
+      ref.invalidate(subscriptionHistoryProvider);
 
       if (mounted) {
         AppBottomSheet.show(

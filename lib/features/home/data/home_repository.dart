@@ -19,22 +19,28 @@ class HomeRepository {
         .from(AppConstants.tableUsers)
         .select('nama_lengkap, target_diet, status_bmi, target_kalori_harian')
         .eq('id', userId)
-        .maybeSingle();
+        .limit(1);
 
-    final namaUser = profileResponse?['nama_lengkap'] ?? 'Pelanggan';
-    final targetDiet = profileResponse?['target_diet'] ?? 'Belum ada target';
-    final statusBmi = profileResponse?['status_bmi'] ?? 'Ideal';
-    final targetKalori = (profileResponse?['target_kalori_harian'] as num?)?.toInt() ?? 2000;
+    final Map<String, dynamic>? profileData =
+        profileResponse.isNotEmpty ? profileResponse.first : null;
 
-    // 2. Cek status paket langganan aktif
-    final packageResponse = await _client
+    final namaUser = profileData?['nama_lengkap'] ?? 'Pelanggan';
+    final targetDiet = profileData?['target_diet'] ?? 'Belum ada target';
+    final statusBmi = profileData?['status_bmi'] ?? 'Ideal';
+    final targetKalori = (profileData?['target_kalori_harian'] as num?)?.toInt() ?? 2000;
+
+    // 2. Cek status paket langganan aktif (ambil paket aktif terbaru/terlama berakhir)
+    final packageResponseList = await _client
         .from(AppConstants.tableTransaksiLangganan)
         .select('id, paket_id, tanggal_mulai, tanggal_selesai')
         .eq('user_id', userId)
         .eq('status_bayar', AppConstants.paymentLunas)
         .gte('tanggal_selesai', tanggalHariIni)
         .order('tanggal_selesai', ascending: false)
-        .maybeSingle();
+        .limit(1);
+
+    final Map<String, dynamic>? packageResponse =
+        packageResponseList.isNotEmpty ? packageResponseList.first : null;
 
     final adaPaketAktif = packageResponse != null;
     int sisaHari = 0;
@@ -66,9 +72,9 @@ class HomeRepository {
             .from(AppConstants.tablePaketLangganan)
             .select('nama_paket')
             .eq('id', paketId)
-            .maybeSingle();
-        if (pResponse != null && pResponse['nama_paket'] != null) {
-          namaPaket = pResponse['nama_paket'];
+            .limit(1);
+        if (pResponse.isNotEmpty && pResponse.first['nama_paket'] != null) {
+          namaPaket = pResponse.first['nama_paket'];
         }
       }
     }

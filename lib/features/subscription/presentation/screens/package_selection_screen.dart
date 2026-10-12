@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_primary_button.dart';
 import '../../../../core/widgets/package_card.dart';
 import '../../../../core/widgets/stepper_header.dart';
@@ -30,6 +31,9 @@ class _PackageSelectionScreenState extends ConsumerState<PackageSelectionScreen>
   @override
   Widget build(BuildContext context) {
     final packagesAsync = ref.watch(packagesFutureProvider);
+    final activeSub = ref.watch(activeSubscriptionProvider).value;
+    final hasActiveSub = activeSub != null;
+
     final currencyFormatter = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp',
@@ -50,6 +54,57 @@ class _PackageSelectionScreenState extends ConsumerState<PackageSelectionScreen>
               title: 'Pilih Durasi Paket',
               subtitle: 'Semua paket mencakup 3x makan sehat setiap hari',
             ),
+            if (hasActiveSub) ...[
+              Container(
+                margin: const EdgeInsets.fromLTRB(
+                  AppSpacing.pagePadding,
+                  AppSpacing.sm,
+                  AppSpacing.pagePadding,
+                  AppSpacing.xs,
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.accentOrange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: AppColors.accentOrange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.accentOrange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Langganan Masih Aktif',
+                            style: AppTypography.titleMd.copyWith(
+                              fontSize: 13,
+                              color: AppColors.accentOrange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Anda masih memiliki paket aktif (${(activeSub['paket_langganan'] as Map?)?['nama_paket'] ?? 'Langganan'}) hingga ${DateFormatter.formatIndonesianDate(activeSub['tanggal_selesai']?.toString())}. Anda baru dapat memesan paket baru setelah paket ini berakhir.',
+                            style: AppTypography.bodySm.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Expanded(
               child: packagesAsync.when(
                 loading: () => const Center(
@@ -135,13 +190,26 @@ class _PackageSelectionScreenState extends ConsumerState<PackageSelectionScreen>
                 boxShadow: AppShadows.top,
               ),
               child: AppPrimaryButton.withPrice(
-                text: 'Lanjut ke Alamat',
-                subtitle: _selectedPackage?.namaPaket,
+                text: hasActiveSub ? 'Langganan Masih Aktif' : 'Lanjut ke Alamat',
+                subtitle: hasActiveSub
+                    ? 'Selesaikan paket aktif saat ini'
+                    : _selectedPackage?.namaPaket,
                 price: _selectedPackage != null
                     ? currencyFormatter.format(_selectedPackage!.harga)
                     : 'Rp0',
-                isEnabled: _selectedPackage != null,
+                isEnabled: !hasActiveSub && _selectedPackage != null,
                 onPressed: () {
+                  if (hasActiveSub) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Anda masih memiliki paket aktif hingga ${DateFormatter.formatIndonesianDate(activeSub['tanggal_selesai']?.toString())}. Paket baru dapat dipesan setelah masa aktif berakhir.',
+                        ),
+                        backgroundColor: AppColors.accentOrange,
+                      ),
+                    );
+                    return;
+                  }
                   if (_selectedPackage == null) return;
                   Navigator.push(
                     context,

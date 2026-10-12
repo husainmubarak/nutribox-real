@@ -6,6 +6,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../models/address_model.dart';
 import '../models/package_model.dart';
 import '../models/schedule_model.dart';
+import '../models/subscription_history_model.dart';
 
 class SubscriptionRepository {
   final SupabaseClient _client;
@@ -67,7 +68,8 @@ class SubscriptionRepository {
       'user_id': userId,
       'label_alamat': labelAlamat,
       'alamat_lengkap': alamatLengkap,
-      'mitra_id': ?targetMitraId,
+      // ignore: use_null_aware_elements
+      if (targetMitraId != null) 'mitra_id': targetMitraId,
     });
   }
 
@@ -89,6 +91,57 @@ class SubscriptionRepository {
     }
   }
 
+  /// Mengambil data langganan aktif user jika ada
+  Future<Map<String, dynamic>?> fetchActiveSubscription(String userId) async {
+    final tanggalHariIni = DateFormatter.toIsoDateString();
+    final response = await _client
+        .from(AppConstants.tableTransaksiLangganan)
+        .select('''
+          id,
+          paket_id,
+          status_bayar,
+          tanggal_mulai,
+          tanggal_selesai,
+          total_harga,
+          paket_langganan (
+            nama_paket,
+            durasi_hari
+          )
+        ''')
+        .eq('user_id', userId)
+        .eq('status_bayar', AppConstants.paymentLunas)
+        .gte('tanggal_selesai', tanggalHariIni)
+        .order('tanggal_selesai', ascending: false)
+        .limit(1);
+
+    if (response.isEmpty) return null;
+    return response.first;
+  }
+
+  /// Mengambil seluruh riwayat transaksi langganan user
+  Future<List<SubscriptionHistoryModel>> fetchSubscriptionHistory(String userId) async {
+    final response = await _client
+        .from(AppConstants.tableTransaksiLangganan)
+        .select('''
+          id,
+          paket_id,
+          status_bayar,
+          tanggal_mulai,
+          tanggal_selesai,
+          total_harga,
+          paket_langganan (
+            nama_paket,
+            durasi_hari
+          )
+        ''')
+        .eq('user_id', userId)
+        .order('tanggal_mulai', ascending: false);
+
+    return response
+        .map((e) => SubscriptionHistoryModel.fromMap(e))
+        .toList();
+  }
+
   /// Membuat transaksi langganan baru lengkap dengan tanggal mulai & selesai
   Future<void> createSubscription({
     required String userId,
@@ -98,6 +151,17 @@ class SubscriptionRepository {
     required String paymentMethod,
     bool simulateImmediateActive = true,
   }) async {
+    // Validasi aturan bisnis: 1 user hanya bisa memiliki 1 paket langganan aktif dalam satu waktu
+    final activeSub = await fetchActiveSubscription(userId);
+    if (activeSub != null) {
+      final paketData = activeSub['paket_langganan'] as Map<String, dynamic>?;
+      final nama = paketData?['nama_paket'] ?? 'paket';
+      final tglSelesai = DateFormatter.formatIndonesianDate(activeSub['tanggal_selesai']?.toString());
+      throw Exception(
+        'Anda masih memiliki langganan $nama yang aktif hingga $tglSelesai. Anda baru dapat melakukan transaksi paket baru jika paket sebelumnya sudah selesai.',
+      );
+    }
+
     final now = DateTime.now();
     final tanggalMulai = DateFormatter.toIsoDateString(now);
     final tanggalSelesai = DateFormatter.toIsoDateString(now.add(Duration(days: durasiHari)));
@@ -135,4 +199,22 @@ final addressesFutureProvider = FutureProvider<List<AddressModel>>((ref) async {
   if (user == null) return [];
   final repo = ref.watch(subscriptionRepositoryProvider);
   return repo.fetchAddresses(user.id);
+});
+
+/// FutureProvider untuk memuat data langganan aktif user saat ini
+final activeSubscriptionProvider =
+    FutureProvider<Map<String, dynamic>?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return null;
+  final repo = ref.watch(subscriptionRepositoryProvider);
+  return repo.fetchActiveSubscription(user.id);
+});
+
+/// FutureProvider untuk memuat riwayat transaksi langganan nyata user dari database
+final subscriptionHistoryProvider =
+    FutureProvider<List<SubscriptionHistoryModel>>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return [];
+  final repo = ref.watch(subscriptionRepositoryProvider);
+  return repo.fetchSubscriptionHistory(user.id);
 });
