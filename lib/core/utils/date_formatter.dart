@@ -52,4 +52,20 @@ class DateFormatter {
     ];
     return '${d.day} ${months[d.month]} ${d.year}';
   }
+
+  /// Mengembalikan tanggal hari Senin dari minggu berjalan
+  static DateTime getMondayOfCurrentWeek([DateTime? date]) {
+    final d = date ?? DateTime.now();
+    final clean = DateTime(d.year, d.month, d.day);
+    return clean.subtract(Duration(days: clean.weekday - 1));
+  }
+
+  /// Memformat tanggal menjadi format pendek (contoh: 14 Okt 2026)
+  static String formatShortIndonesianDate(DateTime d) {
+    const months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    return '${d.day} ${months[d.month]} ${d.year}';
+  }
 }

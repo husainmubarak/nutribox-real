@@ -4,6 +4,8 @@ class ScheduledMealItem {
   final String namaAlamat;
   final String? jamKirim;
   final String? statusPengiriman;
+  final int? kalori;
+  final String? deskripsi;
 
   const ScheduledMealItem({
     required this.waktuMakan,
@@ -11,6 +13,8 @@ class ScheduledMealItem {
     required this.namaAlamat,
     this.jamKirim,
     this.statusPengiriman,
+    this.kalori,
+    this.deskripsi,
   });
 }
 

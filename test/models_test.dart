@@ -3,6 +3,8 @@ import 'package:nutribox/features/kitchen/models/daily_menu_model.dart';
 import 'package:nutribox/features/kitchen/models/delivery_manifest_item.dart';
 import 'package:nutribox/features/kitchen/models/kitchen_dashboard_data.dart';
 import 'package:nutribox/features/profile/models/user_profile.dart';
+import 'package:nutribox/features/home/models/home_dashboard_data.dart';
+import 'package:nutribox/features/home/models/weekly_schedule_data.dart';
 import 'package:nutribox/features/subscription/models/address_model.dart';
 import 'package:nutribox/features/subscription/models/package_model.dart';
 import 'package:nutribox/features/subscription/models/schedule_model.dart';
@@ -141,6 +143,38 @@ void main() {
       expect(dashboard.namaDapur, 'Dapur Sehat Pusat');
       expect(dashboard.totalPorsi, 12);
       expect(dashboard.rekapPesanan['Bulking'], 7);
+    });
+
+    test('WeeklyScheduleData and ScheduledMealItem instantiation', () {
+      const meal = ScheduledMealItem(
+        waktuMakan: 'Sarapan',
+        namaMenu: 'Oatmeal Berry',
+        namaAlamat: 'Kantor',
+        jamKirim: '07:00 - 08:00',
+        statusPengiriman: 'Dimasak',
+        kalori: 450,
+        deskripsi: 'Oatmeal lezat tinggi serat',
+      );
+
+      expect(meal.waktuMakan, 'Sarapan');
+      expect(meal.kalori, 450);
+      expect(meal.deskripsi, 'Oatmeal lezat tinggi serat');
+
+      const weekly = WeeklyScheduleData(
+        adaPaketAktif: true,
+        targetDiet: 'Bulking',
+        targetKalori: 2500,
+        hariIni: 'Rabu',
+        jadwalPerHari: {'Rabu': [meal]},
+        tanggalFormattedPerHari: {'Rabu': '14 Oktober 2026'},
+        tanggalIsoPerHari: {'Rabu': '2026-10-14'},
+      );
+
+      expect(weekly.adaPaketAktif, isTrue);
+      expect(weekly.targetDiet, 'Bulking');
+      expect(weekly.targetKalori, 2500);
+      expect(weekly.jadwalPerHari['Rabu']?.length, 1);
+      expect(weekly.tanggalFormattedPerHari['Rabu'], '14 Oktober 2026');
     });
   });
 }

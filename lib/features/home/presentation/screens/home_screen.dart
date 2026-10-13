@@ -6,6 +6,7 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
 import '../../../../core/widgets/app_chip.dart';
+import '../../../../core/widgets/app_primary_button.dart';
 import '../../../../core/widgets/app_search_bar.dart';
 import '../../../../core/widgets/calorie_summary_card.dart';
 import '../../../../core/widgets/meal_schedule_card.dart';
@@ -32,7 +33,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentTabIndex = 0;
-  String _selectedJadwalDay = 'Senin';
+  String _selectedJadwalDay = DateFormatter.getTodayIndonesianDayName();
   String _selectedTipsCategory = 'Semua';
 
   @override
@@ -557,6 +558,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // TAB 1: JADWAL PENGIRIMAN
   // ==========================================
   Widget _buildJadwalTab(HomeDashboardData data) {
+    final weeklyScheduleAsync = ref.watch(weeklyScheduleProvider);
+
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -577,7 +580,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: AppColors.brandGreen, size: 20),
+                  tooltip: 'Segarkan Jadwal',
+                  onPressed: () => ref.invalidate(weeklyScheduleProvider),
+                ),
                 TextButton.icon(
                   onPressed: () => Navigator.push(
                     context,
@@ -600,39 +607,238 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.pagePadding,
-                0,
-                AppSpacing.pagePadding,
-                88,
+            child: weeklyScheduleAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.brandGreen,
+                  strokeWidth: 3,
+                ),
               ),
-              children: [
-                MealScheduleCard(
-                  waktuMakan: 'Sarapan',
-                  namaMenu: 'Oatmeal Buah Berry & Madu Organik',
-                  jamKirim: '07:00 - 08:00',
-                  alamatSingkat: 'Rumah Utama',
-                  statusPengiriman: 'Dimasak',
-                  kalori: 450,
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: AppColors.accentRed,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Gagal memuat jadwal: $err',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyMd,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      ElevatedButton(
+                        onPressed: () => ref.invalidate(weeklyScheduleProvider),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
                 ),
-                MealScheduleCard(
-                  waktuMakan: 'Makan Siang',
-                  namaMenu: 'Ayam Panggang Lemon Rosemary & Nasi Merah',
-                  jamKirim: '11:30 - 12:30',
-                  alamatSingkat: 'Kantor Pusat',
-                  statusPengiriman: 'Dalam perjalanan',
-                  kalori: 680,
-                ),
-                MealScheduleCard(
-                  waktuMakan: 'Makan Malam',
-                  namaMenu: 'Salmon Panggang Bumbu Jahe & Sayur Kukus',
-                  jamKirim: '18:00 - 19:00',
-                  alamatSingkat: 'Rumah Utama',
-                  statusPengiriman: 'Dimasak',
-                  kalori: 520,
-                ),
-              ],
+              ),
+              data: (scheduleData) {
+                if (!scheduleData.adaPaketAktif) {
+                  return RefreshIndicator(
+                    color: AppColors.brandGreen,
+                    onRefresh: () async {
+                      ref.invalidate(weeklyScheduleProvider);
+                      await ref.read(weeklyScheduleProvider.future);
+                    },
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.pagePadding),
+                      children: [
+                        const SizedBox(height: AppSpacing.xl),
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            boxShadow: AppShadows.card,
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentOrangeSoft,
+                                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                                ),
+                                child: const Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 32,
+                                  color: AppColors.accentOrange,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              Text(
+                                'Belum Ada Langganan Aktif',
+                                style: AppTypography.titleMd,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                'Jadwal makan 3x sehari selama seminggu akan otomatis aktif setelah Anda memilih dan mengaktifkan paket langganan sehat.',
+                                style: AppTypography.bodySm.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                              AppPrimaryButton(
+                                text: 'Pilih Paket Sekarang',
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const PackageSelectionScreen(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final items = scheduleData.jadwalPerHari[_selectedJadwalDay] ?? [];
+                final formattedDate =
+                    scheduleData.tanggalFormattedPerHari[_selectedJadwalDay] ?? '';
+
+                if (items.isEmpty) {
+                  return RefreshIndicator(
+                    color: AppColors.brandGreen,
+                    onRefresh: () async {
+                      ref.invalidate(weeklyScheduleProvider);
+                      await ref.read(weeklyScheduleProvider.future);
+                    },
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.pagePadding),
+                      children: [
+                        const SizedBox(height: AppSpacing.xl),
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            boxShadow: AppShadows.card,
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.no_meals_outlined,
+                                size: 48,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'Tidak Ada Jadwal di Hari $_selectedJadwalDay',
+                                style: AppTypography.titleMd,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                'Anda belum mengatur jadwal pengiriman untuk hari ini.',
+                                style: AppTypography.bodySm.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              TextButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AddressBookScreen(),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.edit_location_alt_outlined),
+                                label: const Text('Atur Alamat Pengiriman'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  color: AppColors.brandGreen,
+                  onRefresh: () async {
+                    ref.invalidate(weeklyScheduleProvider);
+                    await ref.read(weeklyScheduleProvider.future);
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.pagePadding,
+                      0,
+                      AppSpacing.pagePadding,
+                      88,
+                    ),
+                    children: [
+                      // Subheader tanggal
+                      if (formattedDate.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                '$_selectedJadwalDay, $formattedDate',
+                                style: AppTypography.label.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.brandGreenSoft,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.pill),
+                                ),
+                                child: Text(
+                                  'Diet: ${scheduleData.targetDiet}',
+                                  style: AppTypography.label.copyWith(
+                                    color: AppColors.brandGreen,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      ...items.map((item) {
+                        return MealScheduleCard(
+                          waktuMakan: item.waktuMakan,
+                          namaMenu: item.namaMenu,
+                          jamKirim: item.jamKirim,
+                          alamatSingkat: item.namaAlamat,
+                          statusPengiriman: item.statusPengiriman,
+                          kalori: item.kalori,
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],

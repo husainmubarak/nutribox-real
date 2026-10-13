@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../models/home_dashboard_data.dart';
+import '../models/weekly_schedule_data.dart';
 
 class HomeRepository {
   final SupabaseClient _client;
@@ -162,6 +163,211 @@ class HomeRepository {
       namaPaket: namaPaket,
     );
   }
+
+  /// Mengambil jadwal pengiriman makan selama satu minggu penuh (Senin s/d Minggu)
+  Future<WeeklyScheduleData> fetchWeeklySchedule(String userId) async {
+    final now = DateTime.now();
+    final todayClean = DateTime(now.year, now.month, now.day);
+    final hariIniString = DateFormatter.getTodayIndonesianDayName(now);
+    final tanggalHariIni = DateFormatter.toIsoDateString(now);
+
+    // 1. Tentukan tanggal untuk setiap hari di minggu berjalan (Senin - Minggu)
+    final monday = DateFormatter.getMondayOfCurrentWeek(now);
+    final listHari = AppConstants.listHari;
+    final Map<String, String> mapHariKeIso = {};
+    final Map<String, String> mapHariKeFormatted = {};
+    final Map<String, DateTime> mapHariKeDateTime = {};
+
+    for (int i = 0; i < listHari.length; i++) {
+      final dayDate = monday.add(Duration(days: i));
+      final dayName = listHari[i];
+      mapHariKeDateTime[dayName] = dayDate;
+      mapHariKeIso[dayName] = DateFormatter.toIsoDateString(dayDate);
+      mapHariKeFormatted[dayName] =
+          DateFormatter.formatIndonesianDate(mapHariKeIso[dayName]);
+    }
+
+    // 2. Cek apakah user memiliki paket aktif
+    final packageResponseList = await _client
+        .from(AppConstants.tableTransaksiLangganan)
+        .select('id, tanggal_selesai')
+        .eq('user_id', userId)
+        .eq('status_bayar', AppConstants.paymentLunas)
+        .gte('tanggal_selesai', tanggalHariIni)
+        .order('tanggal_selesai', ascending: false)
+        .limit(1);
+
+    final bool adaPaketAktif = packageResponseList.isNotEmpty;
+
+    // 3. Tarik profil user (target diet & target kalori)
+    final profileResponse = await _client
+        .from(AppConstants.tableUsers)
+        .select('target_diet, target_kalori_harian')
+        .eq('id', userId)
+        .limit(1);
+
+    final Map<String, dynamic>? profileData =
+        profileResponse.isNotEmpty ? profileResponse.first : null;
+
+    final targetDiet = profileData?['target_diet']?.toString() ?? 'Jaga BB';
+    final targetKalori =
+        (profileData?['target_kalori_harian'] as num?)?.toInt() ?? 2000;
+    final normalizedDiet = targetDiet == 'Diet' ? 'Cutting' : targetDiet;
+
+    // 4. Tarik daftar alamat tersimpan user untuk memetakan ID alamat ke Label
+    final addressResponse = await _client
+        .from(AppConstants.tableAlamatUser)
+        .select('id, label_alamat')
+        .eq('user_id', userId);
+
+    final Map<String, String> mapAlamat = {};
+    for (var addr in (addressResponse as List<dynamic>)) {
+      mapAlamat[addr['id'].toString()] =
+          addr['label_alamat']?.toString() ?? 'Alamat Tersimpan';
+    }
+
+    // 5. Tarik Master Menu Harian khusus target diet user untuk minggu berjalan
+    final mondayIso = mapHariKeIso['Senin']!;
+    final sundayIso = mapHariKeIso['Minggu']!;
+
+    final Map<String, Map<String, String>> mapMenuMingguIni = {};
+    if (targetDiet != 'Belum ada target') {
+      final menuResponse = await _client
+          .from(AppConstants.tableMasterMenuHarian)
+          .select('tanggal, waktu_makan, nama_menu, deskripsi')
+          .gte('tanggal', mondayIso)
+          .lte('tanggal', sundayIso)
+          .or('target_diet.eq.$targetDiet,target_diet.eq.$normalizedDiet');
+
+      for (var menu in (menuResponse as List<dynamic>)) {
+        final tgl = menu['tanggal']?.toString() ?? '';
+        final wm = menu['waktu_makan']?.toString() ?? '';
+        mapMenuMingguIni["${tgl}_$wm"] = {
+          'nama': menu['nama_menu']?.toString() ?? '',
+          'deskripsi': menu['deskripsi']?.toString() ?? '',
+        };
+      }
+    }
+
+    // 6. Tarik log status pengiriman dari menu_harian untuk user ini minggu ini
+    final logResponse = await _client
+        .from(AppConstants.tableMenuHarian)
+        .select('tanggal, waktu_makan, status_pengiriman')
+        .eq('user_id', userId)
+        .gte('tanggal', mondayIso)
+        .lte('tanggal', sundayIso);
+
+    final Map<String, String> mapStatusLog = {};
+    for (var log in (logResponse as List<dynamic>)) {
+      final tgl = log['tanggal']?.toString() ?? '';
+      final wm = log['waktu_makan']?.toString() ?? '';
+      mapStatusLog["${tgl}_$wm"] = log['status_pengiriman']?.toString() ?? '';
+    }
+
+    // 7. Tarik seluruh jadwal pengiriman mingguan user (7 hari x 3 waktu makan)
+    final scheduleResponse = await _client
+        .from(AppConstants.tableJadwalPengiriman)
+        .select()
+        .eq('user_id', userId);
+
+    final orderUrutanWaktu = {
+      AppConstants.mealSarapan: 1,
+      AppConstants.mealSiang: 2,
+      AppConstants.mealMalam: 3,
+    };
+
+    final defaultJam = {
+      AppConstants.mealSarapan: '07:00 - 08:00',
+      AppConstants.mealSiang: '11:30 - 12:30',
+      AppConstants.mealMalam: '18:00 - 19:00',
+    };
+
+    // Proporsi kalori per waktu makan
+    final kaloriPerWaktu = {
+      AppConstants.mealSarapan: (targetKalori * 0.30).round(),
+      AppConstants.mealSiang: (targetKalori * 0.45).round(),
+      AppConstants.mealMalam: (targetKalori * 0.25).round(),
+    };
+
+    final rawList = List<Map<String, dynamic>>.from(scheduleResponse);
+    final Map<String, List<ScheduledMealItem>> jadwalPerHari = {};
+
+    for (var day in listHari) {
+      final dayDate = mapHariKeDateTime[day]!;
+      final dayIso = mapHariKeIso[day]!;
+      final isPast = dayDate.isBefore(todayClean);
+      final isToday = dayDate.isAtSameMomentAs(todayClean);
+
+      final itemsForDay = rawList.where((j) => j['hari'] == day).toList();
+      itemsForDay.sort((a, b) {
+        final orderA = orderUrutanWaktu[a['waktu_makan']] ?? 99;
+        final orderB = orderUrutanWaktu[b['waktu_makan']] ?? 99;
+        return orderA.compareTo(orderB);
+      });
+
+      jadwalPerHari[day] = itemsForDay.map((j) {
+        final waktuMakan = j['waktu_makan']?.toString() ?? '';
+        final alamatId = j['alamat_id']?.toString() ?? '';
+        final namaAlamat = mapAlamat[alamatId] ?? 'Alamat Tersimpan';
+
+        final menuKey = "${dayIso}_$waktuMakan";
+        final menuInfo = mapMenuMingguIni[menuKey];
+
+        // Nama menu: jika dapur sudah isi, pakai menu dapur.
+        // Jika belum, gunakan placeholder informatif sesuai program diet.
+        final String namaMenu;
+        final String? deskripsi;
+        if (menuInfo != null && menuInfo['nama']!.isNotEmpty) {
+          namaMenu = menuInfo['nama']!;
+          deskripsi = menuInfo['deskripsi'];
+        } else {
+          if (isToday) {
+            namaMenu = 'Menu Sehat Pilihan Chef ($targetDiet)';
+            deskripsi = 'Disiapkan segar oleh dapur mitra';
+          } else if (isPast) {
+            namaMenu = 'Menu Spesial NutriBox ($targetDiet)';
+            deskripsi = null;
+          } else {
+            namaMenu = 'Menu Sedang Disiapkan Chef ($targetDiet)';
+            deskripsi = 'Diumumkan oleh dapur pada H-1';
+          }
+        }
+
+        // Status Pengiriman
+        String statusPengiriman;
+        if (mapStatusLog.containsKey(menuKey) &&
+            mapStatusLog[menuKey]!.isNotEmpty) {
+          statusPengiriman = mapStatusLog[menuKey]!;
+        } else if (isPast) {
+          statusPengiriman = 'Terkirim';
+        } else if (isToday) {
+          statusPengiriman = 'Dimasak';
+        } else {
+          statusPengiriman = 'Terjadwal';
+        }
+
+        return ScheduledMealItem(
+          waktuMakan: waktuMakan,
+          namaMenu: namaMenu,
+          namaAlamat: namaAlamat,
+          jamKirim: defaultJam[waktuMakan] ?? '12:00',
+          statusPengiriman: statusPengiriman,
+          kalori: kaloriPerWaktu[waktuMakan],
+          deskripsi: deskripsi,
+        );
+      }).toList();
+    }
+
+    return WeeklyScheduleData(
+      adaPaketAktif: adaPaketAktif,
+      targetDiet: targetDiet,
+      targetKalori: targetKalori,
+      hariIni: hariIniString,
+      jadwalPerHari: jadwalPerHari,
+      tanggalFormattedPerHari: mapHariKeFormatted,
+      tanggalIsoPerHari: mapHariKeIso,
+    );
+  }
 }
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
@@ -177,4 +383,15 @@ final homeDashboardProvider = FutureProvider<HomeDashboardData>((ref) async {
   }
   final repo = ref.watch(homeRepositoryProvider);
   return repo.fetchDashboardData(user.id);
+});
+
+/// FutureProvider untuk memuat jadwal pengiriman mingguan pelanggan
+final weeklyScheduleProvider =
+    FutureProvider<WeeklyScheduleData>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) {
+    throw Exception('User belum terautentikasi');
+  }
+  final repo = ref.watch(homeRepositoryProvider);
+  return repo.fetchWeeklySchedule(user.id);
 });

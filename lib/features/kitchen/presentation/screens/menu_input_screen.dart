@@ -4,6 +4,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_primary_button.dart';
+import '../../../home/data/home_repository.dart';
 import '../../data/kitchen_repository.dart';
 import '../../models/daily_menu_model.dart';
 
@@ -21,6 +22,7 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
   bool _isProcessing = false;
   String _targetDietTerpilih = AppConstants.dietBulking;
   String _waktuMakanTerpilih = AppConstants.mealSarapan;
+  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
 
   @override
   void initState() {
@@ -52,6 +54,28 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
     );
   }
 
+  Widget _buildQuickDateChip(String label, DateTime targetDate) {
+    final isSelected = _selectedDate.year == targetDate.year &&
+        _selectedDate.month == targetDate.month &&
+        _selectedDate.day == targetDate.day;
+
+    return ActionChip(
+      label: Text(label),
+      labelStyle: AppTypography.bodySm.copyWith(
+        color: isSelected ? AppColors.brandGreen : AppColors.textSecondary,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        fontSize: 12,
+      ),
+      backgroundColor: isSelected ? AppColors.brandGreenSoft : AppColors.surface,
+      side: BorderSide(
+        color: isSelected ? AppColors.brandGreen : AppColors.divider,
+      ),
+      onPressed: () {
+        setState(() => _selectedDate = targetDate);
+      },
+    );
+  }
+
   Future<void> _simpanMenu() async {
     final namaMenu = _namaMenuController.text.trim();
     if (namaMenu.isEmpty) {
@@ -63,12 +87,12 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
     FocusScope.of(context).unfocus();
 
     try {
-      final tanggalHariIni = DateFormatter.toIsoDateString();
+      final tanggalStr = DateFormatter.toIsoDateString(_selectedDate);
       final repo = ref.read(kitchenRepositoryProvider);
 
       await repo.saveDailyMenu(
         DailyMenuModel(
-          tanggal: tanggalHariIni,
+          tanggal: tanggalStr,
           targetDiet: _targetDietTerpilih,
           waktuMakan: _waktuMakanTerpilih,
           namaMenu: namaMenu,
@@ -76,8 +100,15 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
         ),
       );
 
+      // Invalidate providers agar data beranda & jadwal pelanggan langsung terupdate
+      ref.invalidate(homeDashboardProvider);
+      ref.invalidate(weeklyScheduleProvider);
+
       if (mounted) {
-        _showFloatingSnackBar('Menu sehat harian berhasil disimpan!', isError: false);
+        _showFloatingSnackBar(
+          'Menu untuk ${DateFormatter.getTodayIndonesianDayName(_selectedDate)}, ${DateFormatter.formatIndonesianDate(tanggalStr)} berhasil disimpan!',
+          isError: false,
+        );
         Navigator.pop(context);
       }
     } catch (e) {
@@ -91,6 +122,9 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final formattedDateStr =
+        '${DateFormatter.getTodayIndonesianDayName(_selectedDate)}, ${DateFormatter.formatIndonesianDate(DateFormatter.toIsoDateString(_selectedDate))}';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -112,6 +146,87 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Pilihan Tanggal
+                    Text('Tanggal Menu', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.xs),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime.now().subtract(const Duration(days: 7)),
+                          lastDate: DateTime.now().add(const Duration(days: 30)),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: const ColorScheme.light(
+                                  primary: AppColors.brandGreen,
+                                  onPrimary: AppColors.surface,
+                                ),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (picked != null) {
+                          setState(() => _selectedDate = picked);
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm + 4,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.divider),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_month_outlined,
+                              color: AppColors.brandGreen,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                formattedDateStr,
+                                style: AppTypography.bodyMd.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              color: AppColors.textSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildQuickDateChip('Hari Ini', DateTime.now()),
+                          const SizedBox(width: AppSpacing.xs),
+                          _buildQuickDateChip(
+                            'Besok (H-1 / H+1)',
+                            DateTime.now().add(const Duration(days: 1)),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          _buildQuickDateChip(
+                            'Lusa (H+2)',
+                            DateTime.now().add(const Duration(days: 2)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
                     Text('Program Diet', style: AppTypography.label),
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<String>(
@@ -166,7 +281,8 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
                     const SizedBox(height: AppSpacing.xxl),
 
                     AppPrimaryButton(
-                      text: 'Simpan Menu Hari Ini',
+                      text:
+                          'Simpan Menu (${DateFormatter.getTodayIndonesianDayName(_selectedDate)})',
                       isLoading: _isProcessing,
                       onPressed: _simpanMenu,
                     ),

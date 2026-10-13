@@ -31,5 +31,28 @@ void main() {
       expect(DateFormatter.getTodayIndonesianDayName(DateTime(2026, 10, 3)), 'Sabtu'); // Saturday
       expect(DateFormatter.getTodayIndonesianDayName(DateTime(2026, 10, 4)), 'Minggu'); // Sunday
     });
+
+    test('getMondayOfCurrentWeek correctly returns Monday of the week', () {
+      final wednesday = DateTime(2026, 10, 14);
+      final monday = DateFormatter.getMondayOfCurrentWeek(wednesday);
+      expect(monday.year, 2026);
+      expect(monday.month, 10);
+      expect(monday.day, 12);
+      expect(monday.weekday, DateTime.monday);
+
+      final sunday = DateTime(2026, 10, 18);
+      final mondayFromSunday = DateFormatter.getMondayOfCurrentWeek(sunday);
+      expect(mondayFromSunday.day, 12);
+      expect(mondayFromSunday.weekday, DateTime.monday);
+    });
+
+    test('formatIndonesianDate formats ISO string to friendly Indonesian date', () {
+      expect(DateFormatter.formatIndonesianDate('2026-10-14'), '14 Oktober 2026');
+      expect(DateFormatter.formatIndonesianDate(null), '-');
+    });
+
+    test('formatShortIndonesianDate formats DateTime to short date', () {
+      expect(DateFormatter.formatShortIndonesianDate(DateTime(2026, 10, 14)), '14 Okt 2026');
+    });
   });
 }
