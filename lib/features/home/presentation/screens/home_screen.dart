@@ -569,35 +569,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               horizontal: AppSpacing.pagePadding,
               vertical: AppSpacing.sm,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Jadwal Pengantaran',
-                    style: AppTypography.titleLg,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                TextButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddressBookScreen()),
-                  ),
-                  icon: const Icon(Icons.edit_location_alt_outlined, size: 16),
-                  label: const Text('Atur Alamat'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.brandGreen,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Jadwal Pengantaran',
+              style: AppTypography.titleLg,
+              maxLines: 1,
             ),
           ),
           WeekDayChips(
@@ -834,6 +809,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           kalori: item.kalori,
                         );
                       }),
+
+                      const SizedBox(height: AppSpacing.sm),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddressBookScreen(),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.edit_location_alt_outlined,
+                            size: 16,
+                          ),
+                          label: const Text('Atur Alamat Pengiriman'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.brandGreen,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 );
