@@ -571,20 +571,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
-                    'Jadwal Pengiriman',
+                    'Jadwal Pengantaran',
                     style: AppTypography.titleLg,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: AppColors.brandGreen, size: 20),
-                  tooltip: 'Segarkan Jadwal',
-                  onPressed: () => ref.invalidate(weeklyScheduleProvider),
-                ),
+                const SizedBox(width: AppSpacing.sm),
                 TextButton.icon(
                   onPressed: () => Navigator.push(
                     context,
@@ -594,8 +589,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   label: const Text('Atur Alamat'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.brandGreen,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
                     visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
               ],
@@ -866,18 +865,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               horizontal: AppSpacing.pagePadding,
               vertical: AppSpacing.sm,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text('Riwayat Langganan', style: AppTypography.titleLg),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: AppColors.brandGreen, size: 20),
-                  tooltip: 'Segarkan',
-                  onPressed: () => ref.invalidate(subscriptionHistoryProvider),
-                ),
-              ],
+            child: Text(
+              'Riwayat Langganan',
+              style: AppTypography.titleLg,
             ),
           ),
           Expanded(
