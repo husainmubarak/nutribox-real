@@ -23,6 +23,16 @@ class KitchenDashboardScreen extends ConsumerWidget {
         title: const Text('NutriBox Dapur'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.post_add_outlined),
+            tooltip: 'Input Menu',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MenuInputScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout_rounded),
             tooltip: 'Keluar',
             onPressed: () async {
@@ -36,23 +46,6 @@ class KitchenDashboardScreen extends ConsumerWidget {
             },
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MenuInputScreen()),
-          );
-        },
-        backgroundColor: AppColors.brandGreen,
-        icon: const Icon(Icons.add, color: AppColors.surface),
-        label: const Text(
-          'Input Menu',
-          style: TextStyle(
-            color: AppColors.surface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
       body: dashboardAsync.when(
         loading: () => const Center(
@@ -275,7 +268,28 @@ class KitchenDashboardScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 60),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MenuInputScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Input Menu Masakan'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.brandGreen,
+                      side: const BorderSide(color: AppColors.brandGreen, width: 1.5),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
                 ],
               ),
             ),
