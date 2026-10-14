@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/supabase_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_primary_button.dart';
@@ -55,7 +57,8 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
   }
 
   Widget _buildQuickDateChip(String label, DateTime targetDate) {
-    final isSelected = _selectedDate.year == targetDate.year &&
+    final isSelected =
+        _selectedDate.year == targetDate.year &&
         _selectedDate.month == targetDate.month &&
         _selectedDate.day == targetDate.day;
 
@@ -66,7 +69,9 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         fontSize: 12,
       ),
-      backgroundColor: isSelected ? AppColors.brandGreenSoft : AppColors.surface,
+      backgroundColor: isSelected
+          ? AppColors.brandGreenSoft
+          : AppColors.surface,
       side: BorderSide(
         color: isSelected ? AppColors.brandGreen : AppColors.divider,
       ),
@@ -89,9 +94,14 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
     try {
       final tanggalStr = DateFormatter.toIsoDateString(_selectedDate);
       final repo = ref.read(kitchenRepositoryProvider);
+      final user = ref.read(currentUserProvider);
+      if (user == null) {
+        throw Exception('Mitra dapur belum terautentikasi');
+      }
 
       await repo.saveDailyMenu(
         DailyMenuModel(
+          mitraId: user.id,
           tanggal: tanggalStr,
           targetDiet: _targetDietTerpilih,
           waktuMakan: _waktuMakanTerpilih,
@@ -127,9 +137,7 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Input Menu Harian'),
-      ),
+      appBar: AppBar(title: const Text('Input Menu Harian')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.pagePadding),
@@ -154,8 +162,12 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: _selectedDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 7)),
-                          lastDate: DateTime.now().add(const Duration(days: 30)),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 7),
+                          ),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 30),
+                          ),
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
@@ -237,7 +249,8 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
                         return DropdownMenuItem(value: diet, child: Text(diet));
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null) setState(() => _targetDietTerpilih = val);
+                        if (val != null)
+                          setState(() => _targetDietTerpilih = val);
                       },
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -249,10 +262,14 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
                       style: AppTypography.bodyMd,
                       decoration: const InputDecoration(),
                       items: AppConstants.listWaktuMakan.map((waktu) {
-                        return DropdownMenuItem(value: waktu, child: Text(waktu));
+                        return DropdownMenuItem(
+                          value: waktu,
+                          child: Text(waktu),
+                        );
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null) setState(() => _waktuMakanTerpilih = val);
+                        if (val != null)
+                          setState(() => _waktuMakanTerpilih = val);
                       },
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -268,7 +285,10 @@ class _MenuInputScreenState extends ConsumerState<MenuInputScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    Text('Deskripsi & Kandungan Gizi (Opsional)', style: AppTypography.label),
+                    Text(
+                      'Deskripsi & Kandungan Gizi (Opsional)',
+                      style: AppTypography.label,
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     TextField(
                       controller: _deskripsiController,

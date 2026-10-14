@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -22,13 +23,15 @@ class HomeRepository {
         .eq('id', userId)
         .limit(1);
 
-    final Map<String, dynamic>? profileData =
-        profileResponse.isNotEmpty ? profileResponse.first : null;
+    final Map<String, dynamic>? profileData = profileResponse.isNotEmpty
+        ? profileResponse.first
+        : null;
 
     final namaUser = profileData?['nama_lengkap'] ?? 'Pelanggan';
     final targetDiet = profileData?['target_diet'] ?? 'Belum ada target';
     final statusBmi = profileData?['status_bmi'] ?? 'Ideal';
-    final targetKalori = (profileData?['target_kalori_harian'] as num?)?.toInt() ?? 2000;
+    final targetKalori =
+        (profileData?['target_kalori_harian'] as num?)?.toInt() ?? 2000;
 
     // 2. Cek status paket langganan aktif (ambil paket aktif terbaru/terlama berakhir)
     final packageResponseList = await _client
@@ -40,8 +43,9 @@ class HomeRepository {
         .order('tanggal_selesai', ascending: false)
         .limit(1);
 
-    final Map<String, dynamic>? packageResponse =
-        packageResponseList.isNotEmpty ? packageResponseList.first : null;
+    final Map<String, dynamic>? packageResponse = packageResponseList.isNotEmpty
+        ? packageResponseList.first
+        : null;
 
     final adaPaketAktif = packageResponse != null;
     int sisaHari = 0;
@@ -80,40 +84,48 @@ class HomeRepository {
       }
     }
 
-    // 3. Tarik Master Menu Harian khusus target diet user hari ini
-    final Map<String, String> mapMenuHariIni = {};
-    if (targetDiet != 'Belum ada target') {
-      final normalizedDiet = targetDiet == 'Diet' ? 'Cutting' : targetDiet;
-
-      final menuResponse = await _client
-          .from(AppConstants.tableMasterMenuHarian)
-          .select('waktu_makan, nama_menu')
-          .eq('tanggal', tanggalHariIni)
-          .or('target_diet.eq.$targetDiet,target_diet.eq.$normalizedDiet');
-
-      for (var menu in (menuResponse as List<dynamic>)) {
-        mapMenuHariIni[menu['waktu_makan']?.toString() ?? ''] =
-            menu['nama_menu']?.toString() ?? '';
-      }
-    }
-
-    // 4. Tarik daftar alamat tersimpan user untuk memetakan ID alamat ke Label
+    // 3. Tarik alamat dan jadwal agar menu dapat dipilih dari dapur yang melayani alamat.
     final addressResponse = await _client
         .from(AppConstants.tableAlamatUser)
-        .select('id, label_alamat')
+        .select('id, label_alamat, mitra_id')
         .eq('user_id', userId);
 
     final Map<String, String> mapAlamat = {};
+    final Map<String, String> mapDapurAlamat = {};
     for (var addr in (addressResponse as List<dynamic>)) {
-      mapAlamat[addr['id'].toString()] = addr['label_alamat']?.toString() ?? '';
+      final addressId = addr['id'].toString();
+      mapAlamat[addressId] = addr['label_alamat']?.toString() ?? '';
+      final kitchenId = addr['mitra_id']?.toString();
+      if (kitchenId != null) mapDapurAlamat[addressId] = kitchenId;
     }
 
-    // 5. Tarik jadwal pengiriman untuk hari ini
+    // 4. Tarik jadwal hari ini dan ID dapur yang melayani slot tersebut.
     final scheduleResponse = await _client
         .from(AppConstants.tableJadwalPengiriman)
-        .select()
+        .select('waktu_makan, alamat_id')
         .eq('user_id', userId)
         .eq('hari', hariIniString);
+
+    final kitchenIdsToday = (scheduleResponse as List<dynamic>)
+        .map((j) => mapDapurAlamat[j['alamat_id']?.toString() ?? ''])
+        .whereType<String>()
+        .toSet()
+        .toList();
+    final Map<String, String> mapMenuHariIni = {};
+    final normalizedDiet = targetDiet == 'Diet' ? 'Cutting' : targetDiet;
+    if (targetDiet != 'Belum ada target' && kitchenIdsToday.isNotEmpty) {
+      final menuResponse = await _client
+          .from(AppConstants.tableMasterMenuHarian)
+          .select('mitra_id, waktu_makan, nama_menu')
+          .eq('tanggal', tanggalHariIni)
+          .eq('target_diet', normalizedDiet)
+          .inFilter('mitra_id', kitchenIdsToday);
+
+      for (var menu in (menuResponse as List<dynamic>)) {
+        final key = '${menu['mitra_id']}_${menu['waktu_makan']}';
+        mapMenuHariIni[key] = menu['nama_menu']?.toString() ?? '';
+      }
+    }
 
     final orderUrutanWaktu = {
       AppConstants.mealSarapan: 1,
@@ -138,8 +150,11 @@ class HomeRepository {
       final waktuMakan = j['waktu_makan']?.toString() ?? '';
       final alamatId = j['alamat_id']?.toString() ?? '';
       final namaAlamat = mapAlamat[alamatId] ?? 'Alamat Tersimpan';
-      final namaMenu =
-          mapMenuHariIni[waktuMakan] ?? 'Menu Sehat Pilihan Chef';
+      final mitraId = mapDapurAlamat[alamatId];
+      final namaMenu = mitraId == null
+          ? 'Menu Sehat Pilihan Chef'
+          : mapMenuHariIni['${mitraId}_$waktuMakan'] ??
+                'Menu Sehat Pilihan Chef';
 
       return ScheduledMealItem(
         waktuMakan: waktuMakan,
@@ -183,8 +198,9 @@ class HomeRepository {
       final dayName = listHari[i];
       mapHariKeDateTime[dayName] = dayDate;
       mapHariKeIso[dayName] = DateFormatter.toIsoDateString(dayDate);
-      mapHariKeFormatted[dayName] =
-          DateFormatter.formatIndonesianDate(mapHariKeIso[dayName]);
+      mapHariKeFormatted[dayName] = DateFormatter.formatIndonesianDate(
+        mapHariKeIso[dayName],
+      );
     }
 
     // 2. Cek apakah user memiliki paket aktif
@@ -206,43 +222,51 @@ class HomeRepository {
         .eq('id', userId)
         .limit(1);
 
-    final Map<String, dynamic>? profileData =
-        profileResponse.isNotEmpty ? profileResponse.first : null;
+    final Map<String, dynamic>? profileData = profileResponse.isNotEmpty
+        ? profileResponse.first
+        : null;
 
     final targetDiet = profileData?['target_diet']?.toString() ?? 'Jaga BB';
     final targetKalori =
         (profileData?['target_kalori_harian'] as num?)?.toInt() ?? 2000;
     final normalizedDiet = targetDiet == 'Diet' ? 'Cutting' : targetDiet;
 
-    // 4. Tarik daftar alamat tersimpan user untuk memetakan ID alamat ke Label
+    // 4. Tarik alamat tersimpan beserta dapur yang melayaninya.
     final addressResponse = await _client
         .from(AppConstants.tableAlamatUser)
-        .select('id, label_alamat')
+        .select('id, label_alamat, mitra_id')
         .eq('user_id', userId);
 
     final Map<String, String> mapAlamat = {};
+    final Map<String, String> mapDapurAlamat = {};
     for (var addr in (addressResponse as List<dynamic>)) {
-      mapAlamat[addr['id'].toString()] =
+      final addressId = addr['id'].toString();
+      mapAlamat[addressId] =
           addr['label_alamat']?.toString() ?? 'Alamat Tersimpan';
+      final kitchenId = addr['mitra_id']?.toString();
+      if (kitchenId != null) mapDapurAlamat[addressId] = kitchenId;
     }
 
-    // 5. Tarik Master Menu Harian khusus target diet user untuk minggu berjalan
+    // 5. Tarik menu untuk dapur yang melayani alamat pengguna.
     final mondayIso = mapHariKeIso['Senin']!;
     final sundayIso = mapHariKeIso['Minggu']!;
 
     final Map<String, Map<String, String>> mapMenuMingguIni = {};
-    if (targetDiet != 'Belum ada target') {
+    final kitchenIds = mapDapurAlamat.values.toSet().toList();
+    if (targetDiet != 'Belum ada target' && kitchenIds.isNotEmpty) {
       final menuResponse = await _client
           .from(AppConstants.tableMasterMenuHarian)
-          .select('tanggal, waktu_makan, nama_menu, deskripsi')
+          .select('mitra_id, tanggal, waktu_makan, nama_menu, deskripsi')
           .gte('tanggal', mondayIso)
           .lte('tanggal', sundayIso)
-          .or('target_diet.eq.$targetDiet,target_diet.eq.$normalizedDiet');
+          .eq('target_diet', normalizedDiet)
+          .inFilter('mitra_id', kitchenIds);
 
       for (var menu in (menuResponse as List<dynamic>)) {
         final tgl = menu['tanggal']?.toString() ?? '';
         final wm = menu['waktu_makan']?.toString() ?? '';
-        mapMenuMingguIni["${tgl}_$wm"] = {
+        final mitraId = menu['mitra_id']?.toString() ?? '';
+        mapMenuMingguIni['${tgl}_${mitraId}_$wm'] = {
           'nama': menu['nama_menu']?.toString() ?? '',
           'deskripsi': menu['deskripsi']?.toString() ?? '',
         };
@@ -309,9 +333,11 @@ class HomeRepository {
         final waktuMakan = j['waktu_makan']?.toString() ?? '';
         final alamatId = j['alamat_id']?.toString() ?? '';
         final namaAlamat = mapAlamat[alamatId] ?? 'Alamat Tersimpan';
+        final mitraId = mapDapurAlamat[alamatId] ?? '';
 
-        final menuKey = "${dayIso}_$waktuMakan";
+        final menuKey = '${dayIso}_${mitraId}_$waktuMakan';
         final menuInfo = mapMenuMingguIni[menuKey];
+        final statusKey = '${dayIso}_$waktuMakan';
 
         // Nama menu: jika dapur sudah isi, pakai menu dapur.
         // Jika belum, gunakan placeholder informatif sesuai program diet.
@@ -335,9 +361,9 @@ class HomeRepository {
 
         // Status Pengiriman
         String statusPengiriman;
-        if (mapStatusLog.containsKey(menuKey) &&
-            mapStatusLog[menuKey]!.isNotEmpty) {
-          statusPengiriman = mapStatusLog[menuKey]!;
+        if (mapStatusLog.containsKey(statusKey) &&
+            mapStatusLog[statusKey]!.isNotEmpty) {
+          statusPengiriman = mapStatusLog[statusKey]!;
         } else if (isPast) {
           statusPengiriman = 'Terkirim';
         } else if (isToday) {
@@ -386,8 +412,7 @@ final homeDashboardProvider = FutureProvider<HomeDashboardData>((ref) async {
 });
 
 /// FutureProvider untuk memuat jadwal pengiriman mingguan pelanggan
-final weeklyScheduleProvider =
-    FutureProvider<WeeklyScheduleData>((ref) async {
+final weeklyScheduleProvider = FutureProvider<WeeklyScheduleData>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) {
     throw Exception('User belum terautentikasi');
