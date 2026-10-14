@@ -111,6 +111,24 @@ class HomeRepository {
         .whereType<String>()
         .toSet()
         .toList();
+
+    // Ambil status pengiriman hari ini agar kartu Beranda konsisten dengan
+    // tab Jadwal dan status yang diperbarui oleh dapur melalui manifest.
+    final deliveryLogResponse = await _client
+        .from(AppConstants.tableMenuHarian)
+        .select('waktu_makan, status_pengiriman')
+        .eq('user_id', userId)
+        .eq('tanggal', tanggalHariIni);
+
+    final Map<String, String> statusPengirimanHariIni = {};
+    for (final log in (deliveryLogResponse as List<dynamic>)) {
+      final waktuMakan = log['waktu_makan']?.toString();
+      final status = log['status_pengiriman']?.toString();
+      if (waktuMakan != null && status != null && status.isNotEmpty) {
+        statusPengirimanHariIni[waktuMakan] = status;
+      }
+    }
+
     final Map<String, String> mapMenuHariIni = {};
     final normalizedDiet = targetDiet == 'Diet' ? 'Cutting' : targetDiet;
     if (targetDiet != 'Belum ada target' && kitchenIdsToday.isNotEmpty) {
@@ -161,7 +179,8 @@ class HomeRepository {
         namaMenu: namaMenu,
         namaAlamat: namaAlamat,
         jamKirim: defaultJam[waktuMakan] ?? '12:00',
-        statusPengiriman: 'Dimasak',
+        statusPengiriman:
+            statusPengirimanHariIni[waktuMakan] ?? AppConstants.statusDimasak,
       );
     }).toList();
 
@@ -365,7 +384,7 @@ class HomeRepository {
             mapStatusLog[statusKey]!.isNotEmpty) {
           statusPengiriman = mapStatusLog[statusKey]!;
         } else if (isPast) {
-          statusPengiriman = 'Terkirim';
+          statusPengiriman = AppConstants.statusDikirim;
         } else if (isToday) {
           statusPengiriman = 'Dimasak';
         } else {
