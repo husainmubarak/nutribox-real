@@ -48,7 +48,7 @@ class _DeliveryManifestScreenState extends ConsumerState<DeliveryManifestScreen>
       ref.invalidate(kitchenDashboardProvider);
 
       if (mounted) {
-        _showFloatingSnackBar('Status paket berhasil diubah ke Dikirim!', isError: false);
+        _showFloatingSnackBar('Status paket berhasil diubah ke Terkirim!', isError: false);
       }
     } catch (e) {
       if (mounted) {
@@ -222,7 +222,9 @@ class _DeliveryManifestScreenState extends ConsumerState<DeliveryManifestScreen>
                                   ),
                                 )
                               : Text(
-                                  sudahDikirim ? 'Pengiriman Selesai' : 'Tandai Selesai Masak / Dikirim',
+                                  sudahDikirim
+                                      ? 'Pengiriman Selesai'
+                                      : 'Tandai Pengiriman Selesai',
                                   style: AppTypography.label.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),

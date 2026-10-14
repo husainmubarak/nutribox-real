@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -42,36 +45,84 @@ class SubscriptionRepository {
   Future<List<Map<String, dynamic>>> fetchKitchenPartners() async {
     final response = await _client
         .from(AppConstants.tableMitraDapur)
-        .select('id, nama_dapur')
-        .limit(10);
+        .select('id, nama_dapur, latitude, longitude');
     return List<Map<String, dynamic>>.from(response);
   }
 
-  /// Menyimpan alamat baru untuk user (otomatis mengaitkan ke mitra_dapur terdekat/utama)
-  Future<void> addAddress({
+  /// Menyimpan alamat dan mengaitkannya ke dapur dengan koordinat terdekat.
+  Future<KitchenAssignment> addAddress({
     required String userId,
     required String labelAlamat,
     required String alamatLengkap,
-    String? mitraId,
+    required double latitude,
+    required double longitude,
   }) async {
-    String? targetMitraId = mitraId;
+    final kitchens = await fetchKitchenPartners();
+    KitchenAssignment? nearestKitchen;
 
-    // Jika mitraId belum ditentukan, ambil id mitra_dapur pertama yang tersedia di sistem
-    if (targetMitraId == null) {
-      final kitchens = await fetchKitchenPartners();
-      if (kitchens.isNotEmpty) {
-        targetMitraId = kitchens.first['id']?.toString();
+    for (final kitchen in kitchens) {
+      final kitchenLatitude = (kitchen['latitude'] as num?)?.toDouble();
+      final kitchenLongitude = (kitchen['longitude'] as num?)?.toDouble();
+      final kitchenId = kitchen['id']?.toString();
+      if (kitchenLatitude == null ||
+          kitchenLongitude == null ||
+          kitchenId == null) {
+        continue;
       }
+
+      final distanceKm = _distanceInKilometers(
+        latitude,
+        longitude,
+        kitchenLatitude,
+        kitchenLongitude,
+      );
+      if (nearestKitchen == null || distanceKm < nearestKitchen.distanceKm) {
+        nearestKitchen = KitchenAssignment(
+          id: kitchenId,
+          name: kitchen['nama_dapur']?.toString() ?? 'Dapur Mitra',
+          distanceKm: distanceKm,
+        );
+      }
+    }
+
+    if (nearestKitchen == null) {
+      throw Exception('Belum ada dapur yang memiliki koordinat lokasi.');
     }
 
     await _client.from(AppConstants.tableAlamatUser).insert({
       'user_id': userId,
       'label_alamat': labelAlamat,
       'alamat_lengkap': alamatLengkap,
-      // ignore: use_null_aware_elements
-      if (targetMitraId != null) 'mitra_id': targetMitraId,
+      'latitude': latitude,
+      'longitude': longitude,
+      'mitra_id': nearestKitchen.id,
     });
+
+    return nearestKitchen;
   }
+
+  double _distanceInKilometers(
+    double latitude1,
+    double longitude1,
+    double latitude2,
+    double longitude2,
+  ) {
+    const earthRadiusKm = 6371.0;
+    final deltaLatitude = _degreesToRadians(latitude2 - latitude1);
+    final deltaLongitude = _degreesToRadians(longitude2 - longitude1);
+    final a =
+        math.sin(deltaLatitude / 2) * math.sin(deltaLatitude / 2) +
+        math.cos(_degreesToRadians(latitude1)) *
+            math.cos(_degreesToRadians(latitude2)) *
+            math.sin(deltaLongitude / 2) *
+            math.sin(deltaLongitude / 2);
+    final boundedA = a.clamp(0.0, 1.0);
+    final centralAngle =
+        2 * math.atan2(math.sqrt(boundedA), math.sqrt(1 - boundedA));
+    return earthRadiusKm * centralAngle;
+  }
+
+  double _degreesToRadians(double degrees) => degrees * math.pi / 180;
 
   /// Menyimpan jadwal pengiriman makanan mingguan
   Future<void> saveSchedule({
@@ -119,7 +170,9 @@ class SubscriptionRepository {
   }
 
   /// Mengambil seluruh riwayat transaksi langganan user
-  Future<List<SubscriptionHistoryModel>> fetchSubscriptionHistory(String userId) async {
+  Future<List<SubscriptionHistoryModel>> fetchSubscriptionHistory(
+    String userId,
+  ) async {
     final response = await _client
         .from(AppConstants.tableTransaksiLangganan)
         .select('''
@@ -137,9 +190,7 @@ class SubscriptionRepository {
         .eq('user_id', userId)
         .order('tanggal_mulai', ascending: false);
 
-    return response
-        .map((e) => SubscriptionHistoryModel.fromMap(e))
-        .toList();
+    return response.map((e) => SubscriptionHistoryModel.fromMap(e)).toList();
   }
 
   /// Membuat transaksi langganan baru lengkap dengan tanggal mulai & selesai
@@ -156,7 +207,9 @@ class SubscriptionRepository {
     if (activeSub != null) {
       final paketData = activeSub['paket_langganan'] as Map<String, dynamic>?;
       final nama = paketData?['nama_paket'] ?? 'paket';
-      final tglSelesai = DateFormatter.formatIndonesianDate(activeSub['tanggal_selesai']?.toString());
+      final tglSelesai = DateFormatter.formatIndonesianDate(
+        activeSub['tanggal_selesai']?.toString(),
+      );
       throw Exception(
         'Anda masih memiliki langganan $nama yang aktif hingga $tglSelesai. Anda baru dapat melakukan transaksi paket baru jika paket sebelumnya sudah selesai.',
       );
@@ -164,7 +217,9 @@ class SubscriptionRepository {
 
     final now = DateTime.now();
     final tanggalMulai = DateFormatter.toIsoDateString(now);
-    final tanggalSelesai = DateFormatter.toIsoDateString(now.add(Duration(days: durasiHari)));
+    final tanggalSelesai = DateFormatter.toIsoDateString(
+      now.add(Duration(days: durasiHari)),
+    );
 
     // Jika simulasi pembayaran langsung, status_bayar dibuat 'Lunas' agar paket langsung aktif di beranda & dapur
     final statusBayar = simulateImmediateActive
@@ -180,6 +235,18 @@ class SubscriptionRepository {
       'tanggal_selesai': tanggalSelesai,
     });
   }
+}
+
+class KitchenAssignment {
+  final String id;
+  final String name;
+  final double distanceKm;
+
+  const KitchenAssignment({
+    required this.id,
+    required this.name,
+    required this.distanceKm,
+  });
 }
 
 final subscriptionRepositoryProvider = Provider<SubscriptionRepository>((ref) {
@@ -202,8 +269,9 @@ final addressesFutureProvider = FutureProvider<List<AddressModel>>((ref) async {
 });
 
 /// FutureProvider untuk memuat data langganan aktif user saat ini
-final activeSubscriptionProvider =
-    FutureProvider<Map<String, dynamic>?>((ref) async {
+final activeSubscriptionProvider = FutureProvider<Map<String, dynamic>?>((
+  ref,
+) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
   final repo = ref.watch(subscriptionRepositoryProvider);
@@ -213,8 +281,8 @@ final activeSubscriptionProvider =
 /// FutureProvider untuk memuat riwayat transaksi langganan nyata user dari database
 final subscriptionHistoryProvider =
     FutureProvider<List<SubscriptionHistoryModel>>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return [];
-  final repo = ref.watch(subscriptionRepositoryProvider);
-  return repo.fetchSubscriptionHistory(user.id);
-});
+      final user = ref.watch(currentUserProvider);
+      if (user == null) return [];
+      final repo = ref.watch(subscriptionRepositoryProvider);
+      return repo.fetchSubscriptionHistory(user.id);
+    });

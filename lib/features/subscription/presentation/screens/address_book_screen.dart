@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
+
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/theme/app_tokens.dart';
@@ -14,15 +16,13 @@ import '../../data/subscription_repository.dart';
 import '../../models/address_model.dart';
 import '../../models/package_model.dart';
 import '../../models/schedule_model.dart';
+import 'location_picker_screen.dart';
 import 'payment_screen.dart';
 
 class AddressBookScreen extends ConsumerStatefulWidget {
   final PackageModel? selectedPackage;
 
-  const AddressBookScreen({
-    super.key,
-    this.selectedPackage,
-  });
+  const AddressBookScreen({super.key, this.selectedPackage});
 
   @override
   ConsumerState<AddressBookScreen> createState() => _AddressBookScreenState();
@@ -38,6 +38,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
 
   final _labelBaruController = TextEditingController();
   final _detailBaruController = TextEditingController();
+  LatLng? _selectedLocation;
 
   @override
   void initState() {
@@ -141,66 +142,106 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
   void _tampilkanSheetTambahAlamat() {
     _labelBaruController.clear();
     _detailBaruController.clear();
+    _selectedLocation = null;
 
     AppBottomSheet.show(
       context: context,
       title: 'Tambah Alamat Baru',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Label Alamat', style: AppTypography.label),
-          const SizedBox(height: AppSpacing.xs),
-          TextField(
-            controller: _labelBaruController,
-            style: AppTypography.bodyMd,
-            decoration: const InputDecoration(
-              hintText: 'Contoh: Rumah, Kantor, Kos',
+      child: StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Label Alamat', style: AppTypography.label),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              controller: _labelBaruController,
+              style: AppTypography.bodyMd,
+              decoration: const InputDecoration(
+                hintText: 'Contoh: Rumah, Kantor, Kos',
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text('Alamat Lengkap', style: AppTypography.label),
-          const SizedBox(height: AppSpacing.xs),
-          TextField(
-            controller: _detailBaruController,
-            style: AppTypography.bodyMd,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Nama jalan, nomor rumah, RT/RW, patokan',
+            const SizedBox(height: AppSpacing.md),
+            Text('Alamat Lengkap', style: AppTypography.label),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              controller: _detailBaruController,
+              style: AppTypography.bodyMd,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Nama jalan, nomor rumah, RT/RW, patokan',
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          AppPrimaryButton(
-            text: 'Simpan Alamat',
-            onPressed: () async {
-              final label = _labelBaruController.text.trim();
-              final detail = _detailBaruController.text.trim();
-              if (label.isEmpty || detail.isEmpty) {
-                _showFloatingSnackBar('Label dan alamat lengkap wajib diisi!');
-                return;
-              }
-              final user = ref.read(currentUserProvider);
-              if (user == null) return;
-
-              try {
-                final repo = ref.read(subscriptionRepositoryProvider);
-                await repo.addAddress(
-                  userId: user.id,
-                  labelAlamat: label,
-                  alamatLengkap: detail,
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final location = await Navigator.of(sheetContext).push<LatLng>(
+                  MaterialPageRoute(
+                    builder: (_) => LocationPickerScreen(
+                      initialLocation: _selectedLocation,
+                    ),
+                  ),
                 );
-                ref.invalidate(addressesFutureProvider);
-                if (mounted) {
-                  Navigator.pop(context);
-                  _showFloatingSnackBar('Alamat baru berhasil ditambahkan!', isError: false);
+                if (location != null && mounted) {
+                  setSheetState(() => _selectedLocation = location);
                 }
-              } catch (e) {
-                _showFloatingSnackBar('Gagal menambah alamat: $e');
-              }
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
+              },
+              icon: const Icon(Icons.map_outlined),
+              label: Text(
+                _selectedLocation == null
+                    ? 'Tentukan Titik di Peta / GPS'
+                    : 'Ubah Titik di Peta',
+              ),
+            ),
+            if (_selectedLocation != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Koordinat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                style: AppTypography.bodySm,
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+            AppPrimaryButton(
+              text: 'Simpan Alamat',
+              onPressed: () async {
+                final label = _labelBaruController.text.trim();
+                final detail = _detailBaruController.text.trim();
+                if (label.isEmpty ||
+                    detail.isEmpty ||
+                    _selectedLocation == null) {
+                  _showFloatingSnackBar(
+                    'Label, alamat lengkap, dan titik lokasi wajib diisi!',
+                  );
+                  return;
+                }
+                final user = ref.read(currentUserProvider);
+                if (user == null) return;
+
+                try {
+                  final repo = ref.read(subscriptionRepositoryProvider);
+                  final kitchen = await repo.addAddress(
+                    userId: user.id,
+                    labelAlamat: label,
+                    alamatLengkap: detail,
+                    latitude: _selectedLocation!.latitude,
+                    longitude: _selectedLocation!.longitude,
+                  );
+                  ref.invalidate(addressesFutureProvider);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    _showFloatingSnackBar(
+                      'Alamat tersimpan. Dapur terdekat: ${kitchen.name} (${kitchen.distanceKm.toStringAsFixed(1)} km).',
+                      isError: false,
+                    );
+                  }
+                } catch (e) {
+                  _showFloatingSnackBar('Gagal menambah alamat: $e');
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
       ),
     );
   }
@@ -236,23 +277,22 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
 
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
-      await repo.saveSchedule(
-        userId: user.id,
-        scheduleItems: itemsToSave,
-      );
+      await repo.saveSchedule(userId: user.id, scheduleItems: itemsToSave);
 
       if (mounted) {
         if (widget.selectedPackage != null) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PaymentScreen(
-                selectedPackage: widget.selectedPackage!,
-              ),
+              builder: (context) =>
+                  PaymentScreen(selectedPackage: widget.selectedPackage!),
             ),
           );
         } else {
-          _showFloatingSnackBar('Pengaturan alamat berhasil disimpan!', isError: false);
+          _showFloatingSnackBar(
+            'Pengaturan alamat berhasil disimpan!',
+            isError: false,
+          );
           Navigator.pop(context);
         }
       }
@@ -271,9 +311,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Alamat Pengiriman'),
-      ),
+      appBar: AppBar(title: const Text('Alamat Pengiriman')),
       body: SafeArea(
         child: Column(
           children: [
@@ -281,7 +319,8 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
               currentStep: widget.selectedPackage != null ? 1 : 0,
               totalSteps: widget.selectedPackage != null ? 3 : 1,
               title: 'Atur Alamat per Waktu Makan',
-              subtitle: 'Katering dapat dikirim ke lokasi berbeda tiap waktu makan',
+              subtitle:
+                  'Katering dapat dikirim ke lokasi berbeda tiap waktu makan',
             ),
 
             // Toggle "Samakan semua hari"
@@ -368,8 +407,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                         waktuMakan: waktu,
                         labelAlamat: alamat.labelAlamat,
                         alamatLengkap: alamat.alamatLengkap,
-                        onUbahTap: () =>
-                            _pilihAlamatViaSheet(waktu, addresses),
+                        onUbahTap: () => _pilihAlamatViaSheet(waktu, addresses),
                       );
                     }).toList(),
                   );

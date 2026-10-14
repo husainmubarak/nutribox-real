@@ -4,6 +4,8 @@ class AddressModel {
   final String labelAlamat;
   final String alamatLengkap;
   final String? mitraId;
+  final double? latitude;
+  final double? longitude;
 
   const AddressModel({
     required this.id,
@@ -11,6 +13,8 @@ class AddressModel {
     required this.labelAlamat,
     required this.alamatLengkap,
     this.mitraId,
+    this.latitude,
+    this.longitude,
   });
 
   factory AddressModel.fromMap(Map<String, dynamic> map) {
@@ -20,6 +24,8 @@ class AddressModel {
       labelAlamat: map['label_alamat'] ?? '',
       alamatLengkap: map['alamat_lengkap'] ?? '',
       mitraId: map['mitra_id']?.toString(),
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -32,6 +38,8 @@ class AddressModel {
       'label_alamat': labelAlamat,
       'alamat_lengkap': alamatLengkap,
       'mitra_id': ?mitraId,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 }

@@ -21,7 +21,7 @@ class DeliveryManifestItem {
     required this.statusPengiriman,
   });
 
-  bool get isDelivered => statusPengiriman == AppConstants.statusDikirim;
+  bool get isDelivered => statusPengiriman == AppConstants.statusTerkirim;
 
   DeliveryManifestItem copyWith({
     String? statusPengiriman,

@@ -55,5 +55,5 @@ class AppConstants {
 
   // Delivery Statuses
   static const String statusDimasak = 'Dimasak';
-  static const String statusDikirim = 'Dikirim';
+  static const String statusTerkirim = 'Terkirim';
 }

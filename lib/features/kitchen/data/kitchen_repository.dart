@@ -265,7 +265,7 @@ class KitchenRepository {
     }
 
     final updateData = <String, dynamic>{
-      'status_pengiriman': AppConstants.statusDikirim,
+      'status_pengiriman': AppConstants.statusTerkirim,
       if (menuMaster != null) 'master_menu_id': menuMaster['id'],
       if (menuMaster != null) 'nama_menu': menuMaster['nama_menu'],
     };
@@ -288,7 +288,7 @@ class KitchenRepository {
         'user_id': userId,
         'tanggal': tanggalHariIni,
         'waktu_makan': waktuMakan,
-        'status_pengiriman': AppConstants.statusDikirim,
+        'status_pengiriman': AppConstants.statusTerkirim,
         'alamat_id': alamatId,
         if (menuMaster != null) 'master_menu_id': menuMaster['id'],
         if (menuMaster != null) 'nama_menu': menuMaster['nama_menu'],

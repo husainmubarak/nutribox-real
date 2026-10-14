@@ -12,6 +12,11 @@ class HomeRepository {
 
   HomeRepository(this._client);
 
+  String _statusUntukTampilan(String? status) {
+    if (status == 'Dikirim') return AppConstants.statusTerkirim;
+    return status ?? '';
+  }
+
   Future<HomeDashboardData> fetchDashboardData(String userId) async {
     final hariIniString = DateFormatter.getTodayIndonesianDayName();
     final tanggalHariIni = DateFormatter.toIsoDateString();
@@ -123,7 +128,9 @@ class HomeRepository {
     final Map<String, String> statusPengirimanHariIni = {};
     for (final log in (deliveryLogResponse as List<dynamic>)) {
       final waktuMakan = log['waktu_makan']?.toString();
-      final status = log['status_pengiriman']?.toString();
+      final status = _statusUntukTampilan(
+        log['status_pengiriman']?.toString(),
+      );
       if (waktuMakan != null && status != null && status.isNotEmpty) {
         statusPengirimanHariIni[waktuMakan] = status;
       }
@@ -304,7 +311,9 @@ class HomeRepository {
     for (var log in (logResponse as List<dynamic>)) {
       final tgl = log['tanggal']?.toString() ?? '';
       final wm = log['waktu_makan']?.toString() ?? '';
-      mapStatusLog["${tgl}_$wm"] = log['status_pengiriman']?.toString() ?? '';
+      mapStatusLog["${tgl}_$wm"] = _statusUntukTampilan(
+        log['status_pengiriman']?.toString(),
+      );
     }
 
     // 7. Tarik seluruh jadwal pengiriman mingguan user (7 hari x 3 waktu makan)
@@ -384,7 +393,7 @@ class HomeRepository {
             mapStatusLog[statusKey]!.isNotEmpty) {
           statusPengiriman = mapStatusLog[statusKey]!;
         } else if (isPast) {
-          statusPengiriman = AppConstants.statusDikirim;
+          statusPengiriman = AppConstants.statusTerkirim;
         } else if (isToday) {
           statusPengiriman = 'Dimasak';
         } else {
