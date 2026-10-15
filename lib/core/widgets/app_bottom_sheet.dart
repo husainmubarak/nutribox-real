@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_tokens.dart';
 
 class AppBottomSheet extends StatelessWidget {
@@ -25,16 +26,32 @@ class AppBottomSheet extends StatelessWidget {
       isScrollControlled: isScrollControlled,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-        ),
-        child: AppBottomSheet(
-          title: title,
-          trailing: trailing,
-          child: child,
-        ),
-      ),
+      builder: (ctx) {
+        final mediaQuery = MediaQuery.of(ctx);
+        final keyboardHeight = mediaQuery.viewInsets.bottom;
+
+        return AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: keyboardHeight),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight:
+                    mediaQuery.size.height -
+                    keyboardHeight -
+                    mediaQuery.padding.top,
+              ),
+              child: AppBottomSheet(
+                title: title,
+                trailing: trailing,
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -70,18 +87,19 @@ class AppBottomSheet extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      title!,
-                      style: AppTypography.titleLg,
-                    ),
-                  ),
+                  Expanded(child: Text(title!, style: AppTypography.titleLg)),
                   ?trailing,
                 ],
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
-            Flexible(child: child),
+            Flexible(
+              child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: child,
+              ),
+            ),
           ],
         ),
       ),

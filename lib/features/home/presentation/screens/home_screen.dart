@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
@@ -248,7 +249,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Promo & Info Spesial', style: AppTypography.titleMd),
+                        Text(
+                          'Promo & Info Spesial',
+                          style: AppTypography.titleMd,
+                        ),
                         Text(
                           'Lihat Semua',
                           style: AppTypography.label.copyWith(
@@ -291,36 +295,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: [
-                          'Semua',
-                          'Nutrisi',
-                          'Olahraga',
-                          'Diet Sehat',
-                        ].map((cat) {
-                          final isSelected = _selectedTipsCategory == cat;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: AppSpacing.sm),
-                            child: AppChip(
-                              label: cat,
-                              isSelected: isSelected,
-                              onTap: () => setState(() => _selectedTipsCategory = cat),
-                            ),
-                          );
-                        }).toList(),
+                        children: ['Semua', 'Nutrisi', 'Olahraga', 'Diet Sehat']
+                            .map((cat) {
+                              final isSelected = _selectedTipsCategory == cat;
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  right: AppSpacing.sm,
+                                ),
+                                child: AppChip(
+                                  label: cat,
+                                  isSelected: isSelected,
+                                  onTap: () => setState(
+                                    () => _selectedTipsCategory = cat,
+                                  ),
+                                ),
+                              );
+                            })
+                            .toList(),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _buildTipsCard(
                       title: 'Pentingnya Menjaga Keseimbangan Makronutrisi',
-                      desc:
-                          'Protein, karbohidrat kompleks, dan lemak sehat membantu metabolisme tubuh tetap prima sepanjang hari.',
+                      desc: 'Protein, karbohidrat kompleks, dan lemak sehat membantu metabolisme tubuh tetap prima sepanjang hari.',
                       readTime: '3 menit baca',
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _buildTipsCard(
                       title: 'Cukup Hidrasi: Kunci Sukses Target Gizi',
-                      desc:
-                          'Minum minimal 2 liter air setiap hari untuk mengoptimalkan penyerapan kalori dan energi harianmu.',
+                      desc: 'Minum minimal 2 liter air setiap hari untuk mengoptimalkan penyerapan kalori dan energi harianmu.',
                       readTime: '2 menit baca',
                     ),
 
@@ -337,9 +340,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildGojekHeader(HomeDashboardData data) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: AppColors.brandGradient,
-      ),
+      decoration: const BoxDecoration(gradient: AppColors.brandGradient),
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + AppSpacing.md,
         left: AppSpacing.pagePadding,
@@ -351,27 +352,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           // Sapaan & Avatar
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Halo, ${data.namaUser}! 👋',
-                    style: AppTypography.titleLg.copyWith(
-                      color: AppColors.surface,
-                      fontSize: 22,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Halo, ${data.namaUser}! \u{1F44B}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleLg.copyWith(
+                        color: AppColors.surface,
+                        fontSize: 22,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Selamat menikmati sajian sehatmu',
-                    style: AppTypography.bodySm.copyWith(
-                      color: AppColors.surface.withValues(alpha: 0.9),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Selamat menikmati sajian sehatmu',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.surface.withValues(alpha: 0.9),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: AppSpacing.md),
               GestureDetector(
                 onTap: () => setState(() => _currentTabIndex = 3),
                 child: Container(
@@ -466,7 +473,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             tone: ServiceGridTone.green,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const NutritionCalculatorScreen()),
+              MaterialPageRoute(
+                builder: (_) => const NutritionCalculatorScreen(),
+              ),
             ),
           ),
           ServiceGridItem(
@@ -640,7 +649,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 height: 64,
                                 decoration: BoxDecoration(
                                   color: AppColors.accentOrangeSoft,
-                                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
+                                  ),
                                 ),
                                 child: const Icon(
                                   Icons.calendar_today_outlined,
@@ -668,7 +679,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 onPressed: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const PackageSelectionScreen(),
+                                    builder: (_) =>
+                                        const PackageSelectionScreen(),
                                   ),
                                 ),
                               ),
@@ -680,9 +692,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   );
                 }
 
-                final items = scheduleData.jadwalPerHari[_selectedJadwalDay] ?? [];
+                final items =
+                    scheduleData.jadwalPerHari[_selectedJadwalDay] ?? [];
                 final formattedDate =
-                    scheduleData.tanggalFormattedPerHari[_selectedJadwalDay] ?? '';
+                    scheduleData.tanggalFormattedPerHari[_selectedJadwalDay] ??
+                    '';
 
                 if (items.isEmpty) {
                   return RefreshIndicator(
@@ -731,7 +745,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     builder: (_) => const AddressBookScreen(),
                                   ),
                                 ),
-                                icon: const Icon(Icons.edit_location_alt_outlined),
+                                icon: const Icon(
+                                  Icons.edit_location_alt_outlined,
+                                ),
                                 label: const Text('Atur Alamat Pengiriman'),
                               ),
                             ],
@@ -783,8 +799,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: AppColors.brandGreenSoft,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.pill),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
+                                  ),
                                 ),
                                 child: Text(
                                   'Diet: ${scheduleData.targetDiet}',
@@ -864,10 +881,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               horizontal: AppSpacing.pagePadding,
               vertical: AppSpacing.sm,
             ),
-            child: Text(
-              'Riwayat Langganan',
-              style: AppTypography.titleLg,
-            ),
+            child: Text('Riwayat Langganan', style: AppTypography.titleLg),
           ),
           Expanded(
             child: historyAsync.when(
@@ -998,8 +1012,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         statusLabel = item.statusBayar;
                       }
 
-                      final isMenunggu =
-                          item.statusBayar.toLowerCase().contains('menunggu');
+                      final isMenunggu = item.statusBayar
+                          .toLowerCase()
+                          .contains('menunggu');
 
                       return _buildRiwayatCard(
                         namaPaket: item.namaPaket,
@@ -1102,7 +1117,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Text(
                 total,
                 style: AppTypography.price.copyWith(
-                  color: isActive ? AppColors.brandGreen : AppColors.textPrimary,
+                  color: isActive
+                      ? AppColors.brandGreen
+                      : AppColors.textPrimary,
                 ),
               ),
             ],
@@ -1309,8 +1326,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           color: isDanger ? AppColors.accentRed : AppColors.textPrimary,
         ),
       ),
-      subtitle: subtitle != null ? Text(subtitle, style: AppTypography.bodySm) : null,
-      trailing: isDanger ? null : const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+      subtitle: subtitle != null
+          ? Text(subtitle, style: AppTypography.bodySm)
+          : null,
+      trailing: isDanger
+          ? null
+          : const Icon(Icons.chevron_right, color: AppColors.textSecondary),
       onTap: onTap,
     );
   }
@@ -1328,14 +1349,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           ListTile(
-            leading: const Icon(Icons.chat_bubble_outline, color: AppColors.brandGreen),
+            leading: const Icon(
+              Icons.chat_bubble_outline,
+              color: AppColors.brandGreen,
+            ),
             title: const Text('Chat WhatsApp Customer Care'),
             subtitle: const Text('08:00 - 20:00 WIB'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 14),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.email_outlined, color: AppColors.accentBlue),
+            leading: const Icon(
+              Icons.email_outlined,
+              color: AppColors.accentBlue,
+            ),
             title: const Text('Email Support'),
             subtitle: const Text('support@nutribox.id'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -1416,7 +1443,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AddressBookScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const AddressBookScreen(),
+                    ),
                   );
                 },
               ),
@@ -1428,7 +1457,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const PackageSelectionScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const PackageSelectionScreen(),
+                    ),
                   );
                 },
               ),

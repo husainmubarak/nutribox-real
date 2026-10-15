@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_tokens.dart';
 import 'service_grid_item.dart';
 
 class ServiceGrid extends StatelessWidget {
   final List<ServiceGridItem> items;
 
-  const ServiceGrid({
-    super.key,
-    required this.items,
-  });
+  const ServiceGrid({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +18,8 @@ class ServiceGrid extends StatelessWidget {
         crossAxisCount: 4,
         crossAxisSpacing: AppSpacing.sm,
         mainAxisSpacing: AppSpacing.lg,
-        childAspectRatio: 0.75,
+        // Give the icon and label enough height to avoid vertical overflow.
+        mainAxisExtent: 88,
       ),
       itemBuilder: (context, index) => items[index],
     );

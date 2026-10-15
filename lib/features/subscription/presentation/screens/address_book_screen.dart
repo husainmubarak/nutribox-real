@@ -131,7 +131,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
               _tampilkanSheetTambahAlamat();
             },
             icon: const Icon(Icons.add),
-            label: const Text('+ Tambah Alamat Baru'),
+            label: const Text('Tambah Alamat Baru'),
           ),
           const SizedBox(height: AppSpacing.md),
         ],
