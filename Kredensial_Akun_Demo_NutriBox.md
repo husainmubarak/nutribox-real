@@ -21,6 +21,7 @@ Semua akun berikut adalah akun demo. Email menggunakan domain `example.com`.
 | 13 | Nurul Aisyah | nutribox.user13@example.com | `NBox-User13!2026` |
 | 14 | Ilham Maulana | nutribox.user14@example.com | `NBox-User14!2026` |
 | 15 | Maya Safitri | nutribox.user15@example.com | `NBox-User15!2026` |
+| 16 | Bayu Kurniawan | nutribox.user16@example.com | `NBox-User16!2026` |
 
 ## Akun Dapur
 
@@ -29,5 +30,9 @@ Semua akun berikut adalah akun demo. Email menggunakan domain `example.com`.
 | 1 | NutriBox Makassar Barat | nutribox.dapur01@example.com | `NBox-Dapur01!2026` |
 | 2 | NutriBox Makassar Tengah | nutribox.dapur02@example.com | `NBox-Dapur02!2026` |
 | 3 | NutriBox Makassar Timur | nutribox.dapur03@example.com | `NBox-Dapur03!2026` |
+| 4 | NutriBox Banjarbaru | nutribox.dapur04@example.com | `NBox-Dapur04!2026` |
+| 5 | NutriBox Banjarmasin | nutribox.dapur05@example.com | `NBox-Dapur05!2026` |
 
 > Data nama, alamat, dan profil pengguna merupakan data demo sintetis.
+> Lokasi dapur Banjarbaru dan Banjarmasin memakai koordinat perkiraan pusat kota untuk kebutuhan demo; sesuaikan koordinat dan alamat sebelum digunakan secara operasional.
+> Ganti password akun demo sebelum aplikasi digunakan di lingkungan nyata. Jangan gunakan kredensial ini untuk data atau layanan produksi.
