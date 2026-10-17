@@ -823,7 +823,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           jamKirim: item.jamKirim,
                           alamatSingkat: item.namaAlamat,
                           statusPengiriman: item.statusPengiriman,
-                          kalori: item.kalori,
                         );
                       }),
 

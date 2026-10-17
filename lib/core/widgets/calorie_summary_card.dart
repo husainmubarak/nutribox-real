@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_tokens.dart';
 import 'status_badge.dart';
 
@@ -33,7 +34,7 @@ class CalorieSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: AppColors.brandGradient,
+        gradient: AppColors.walletGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: AppShadows.card,
       ),
@@ -91,9 +92,7 @@ class CalorieSummaryCard extends StatelessWidget {
             children: [
               Text(
                 '$targetKalori',
-                style: AppTypography.metric.copyWith(
-                  color: AppColors.surface,
-                ),
+                style: AppTypography.metric.copyWith(color: AppColors.surface),
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
@@ -111,7 +110,9 @@ class CalorieSummaryCard extends StatelessWidget {
                     foregroundColor: AppColors.brandGreen,
                     elevation: 0,
                     minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
                     shape: const StadiumBorder(),
                     textStyle: AppTypography.label.copyWith(
                       fontWeight: FontWeight.bold,
